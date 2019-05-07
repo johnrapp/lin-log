@@ -1,0 +1,179 @@
+Code from Lecture 1
+
+```{r}
+# put ice-cream data from lecture 1 in a data frame:
+
+icecream <- data.frame(weeks = c(25, 26,  27, 30, 31, 32, 35),
+                       loss = c(28, 28.3, 29.7, 35.3, 36.4, 37.0, 40.2))
+
+# and plot it:
+with(icecream, 
+     plot(loss ~ weeks, 
+          xlab = "time (weeks)",
+          ylab = "weight loss (g)",
+          xlim = c(23, 38),
+          ylim = c(25, 45), 
+          main = "Ice cream weight loss"))
+
+# compute regression estimates "by hand"
+mx <- mean(icecream$weeks)
+my <- mean(icecream$loss)
+beta1 <- sum((icecream$weeks - mx) * (icecream$loss - my)) /
+  sum((icecream$weeks - mx)^2)
+beta0 <- my - beta1 * mx
+beta0
+beta1
+
+# add the estimated straight line to the plot:
+abline(a = beta0, b = beta1)
+
+# estimated average weight loss at 34 weeks, by hand
+y0 <- beta0 + beta1 * 34
+y0
+# add it to the plot;
+points(34, y0, col = "black", pch = 16)
+
+# residual standard error by hand:
+yhat <- beta0 + beta1 * icecream$weeks
+e <- icecream$loss - yhat
+n <- nrow(icecream)
+s2 <- sum(e^2) / (n - 2)
+s <- sqrt(s2)
+s
+
+# now using lm(): define an "object" named 'model' which can be reused later on
+model <- lm(loss ~ weeks, data = icecream)  
+model
+summary(model)
+
+# add the estimated model to the plot (again)
+abline(model, col = "blue")
+
+# prediction using the predict function
+x0 <- 34
+y0 <- predict(model, data.frame(weeks = x0))
+y0
+points(x0, y0, col = "blue", pch = 16)
+```
+
+Code from Lecture 2
+```{r}
+# put ice-cream data from lecture 1 in a data frame:
+
+icecream <- data.frame(weeks = c(25, 26,  27, 30, 31, 32, 35),
+                       loss = c(28, 28.3, 29.7, 35.3, 36.4, 37.0, 40.2))
+# and plot it:
+with(icecream, 
+     plot(loss ~ weeks, 
+          xlab = "time (weeks)",
+          ylab = "weight loss (g)",
+          xlim = c(23, 38),
+          ylim = c(25, 45), 
+          main = "Ice cream weight loss"))
+
+model <- lm(loss ~ weeks, data = icecream)  
+model
+summary(model)
+
+# add the estimated model to the plot
+abline(model, col = "blue")
+```
+
+```{r}
+# predictions, residuals and residual standard deviation
+yhat <- model$fitted.values
+e <- model$residuals
+s <- summary(model)$sigma
+
+# 95% confidence intervals for parameters by hand:
+# we need 's', the square root of the estimate of the error variance, see above
+# 2.5%-quantile for a Student's distribution with n-2 degrees of freedom:
+t_quant <- qt(1 - 0.05 / 2, n - 2)
+se_beta0 <- s * sqrt(1 / n + mx^2 / sum((icecream$week - mx)^2))
+se_beta1 <- s / sqrt(sum((icecream$week - mx)^2))
+ci_beta0 <- beta0 + c(-1, 1) * t_quant * se_beta0
+ci_beta1 <- beta1 + c(-1, 1) * t_quant * se_beta1
+
+ci_beta0
+ci_beta1
+
+
+```
+
+```{r}
+# Let's plot confidence and prediction intervals for E(Y0) and Y0 respectively
+xx0 <- seq(23, 38, 0.1)  # just a grid of values for the predictor, from 23 to
+# 38 with step 0.1
+predx <- data.frame(weeks = xx0)
+# add the predictions and confidence interval as new columns in the predx data 
+# frame, with name prefix "conf":
+predx <- cbind(predx, conf = predict(model, predx, interval = "confidence"))
+# add the predictions (again) and prediction interval as new columns in the
+# predx data frame, adding the prefix "pred" to the prediction columns:
+predx <- cbind(predx, pred = predict(model, predx, interval = "prediction"))
+head(predx)
+
+
+with(icecream, 
+     plot(loss ~ weeks, 
+          xlab = "time (weeks)",
+          ylab = "weight loss (g)",
+          xlim = c(23, 38),
+          ylim = c(25, 45), 
+          main = "Ice cream weight loss"))
+# add confidence interval lines
+with(predx, {
+  lines(weeks, conf.lwr, lty = 2, col = "red", lwd = 2)
+  lines(weeks, conf.upr, lty = 2, col = "red", lwd = 2)
+})
+# add prediction interval lines
+with(predx, {
+  lines(weeks, pred.lwr, lty = 3, col = "blue", lwd = 2)
+  lines(weeks, pred.upr, lty = 3, col = "blue", lwd = 2)
+})
+grid()
+
+```
+
+```{r}
+# Estimate the model y = beta0 + beta1*x:
+summod <- summary(model)
+summod
+
+## Reject H0 since Pr(>|t|) = 4.36*10^(-7) < 0.05.
+
+###################################
+## t-test of H0: beta1 = 0 "by hand" ##
+###################################
+# The slope estimate: 
+beta1 <- model$coefficients[2]
+## same as
+# beta1 <- summod$coefficients[2, 1]
+# beta1 <- summod$coefficients["radiation", "Estimate"]
+
+# The sigma-estimate:
+s <- summod$sigma  # also given as "Residual standard error" in summod
+
+t <- summod$coefficients[2, 3]
+t
+t_alfa <- qt(1 - 0.05 / 2, model$df.residual)
+t_alfa
+
+pvalue <- 2 * pt(abs(t), model$df.residual, lower.tail = FALSE)
+pvalue
+
+summod$coefficients["weeks", "Pr(>|t|)"]
+
+# check assumptions using residuals
+e <- model$residuals
+
+# No forgotten trends in x?
+plot(e ~ icecream$weeks, xlab = "time (weeks)",
+     ylab = "residuals",
+     main = "nonlinear in x?", ylim = c(-70, 70))
+abline(h = 0)
+
+
+hist(e)
+```
+

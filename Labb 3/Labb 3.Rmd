@@ -1,0 +1,225 @@
+---
+title: "Labb 3"
+output: html_notebook
+---
+```{r}
+
+cdi <- read.delim("CDI.txt")
+cdi$region <- factor(cdi$region, levels = c(1, 2, 3, 4),
+labels = c("Northeast", "Midwest", "South", "West"))
+cdi$phys1000 <- 1000 * cdi$phys / cdi$popul
+cdi$crm1000 <- 1000 * cdi$crimes / cdi$popul
+```
+
+a) Plots:
+```{r}
+plot(phys1000 ~ percapitaincome, data = cdi, main ="Phys vs percapitaincome")
+plot(phys1000 ~ crm1000, data = cdi, main ="Phys vs crm1000")
+plot(phys1000 ~ pop65plus, data = cdi, main ="Phys vs pop65plus")
+
+plot(log(phys1000) ~ percapitaincome, data = cdi, main ="log(Phys) vs percapitaincome")
+plot(log(phys1000) ~ crm1000, data = cdi, main ="log(Phys) vs crm1000")
+plot(log(phys1000) ~ pop65plus, data = cdi, main ="log(Phys) vs pop65plus")
+```
+
+Log looks reasonable, more linear
+
+b)
+```{r}
+model1 <- lm(log(phys1000) ~ percapitaincome, data = cdi)
+model2 <- lm(log(phys1000) ~ crm1000, data = cdi)
+model3 <- lm(log(phys1000) ~ pop65plus, data = cdi)
+model4 <- lm(log(phys1000) ~ percapitaincome + crm1000, data = cdi)
+model5 <- lm(log(phys1000) ~ percapitaincome + pop65plus, data = cdi)
+model6 <- lm(log(phys1000) ~ crm1000 + pop65plus, data = cdi)
+model7 <- lm(log(phys1000) ~ percapitaincome + crm1000 + pop65plus, data = cdi)
+model8 <- lm(log(phys1000) ~ 1, data = cdi)
+
+r2 = c(
+  summary(model1)$adj.r.squared,
+  summary(model2)$adj.r.squared,
+  summary(model3)$adj.r.squared,
+  summary(model4)$adj.r.squared,
+  summary(model5)$adj.r.squared,
+  summary(model6)$adj.r.squared,
+  summary(model7)$adj.r.squared,
+  summary(model8)$adj.r.squared
+)
+r2
+
+bic = c(
+  AIC(model1, k = log(440)),
+  AIC(model2, k = log(440)),
+  AIC(model3, k = log(440)),
+  AIC(model4, k = log(440)),
+  AIC(model5, k = log(440)),
+  AIC(model6, k = log(440)),
+  AIC(model7, k = log(440)),
+  AIC(model8, k = log(440))
+)
+bic
+
+
+
+```
+
+Model7 has highest R^2 and lowest BIC => Model 7 is the best performing
+
+c)
+```{r}
+plot(influence(model7)$hat)
+
+plot(influence(model7)$hat ~cdi$percapitaincome)
+plot(influence(model7)$hat ~cdi$crm1000)
+plot(influence(model7)$hat ~cdi$pop65plus)
+```
+One clear outlier in terms of influence, which also has high (~300) crm1000
+```{r}
+outlier <- which(cdi$crm1000 > 250)
+cdi[outlier,]
+```
+Seems to be Kings
+
+d)
+```{r}
+studRes <- rstudent(model7)
+plot(studRes ~ cdi$percapitaincome)
+plot(studRes ~ cdi$crm1000)
+plot(studRes ~ cdi$pop65plus)
+
+pred <- predict(model7)
+plot(studRes ~ pred)
+abline(h=c(-2,2))
+
+studRes[outlier]
+```
+Problem: Many points are outside of the predicted interval - applies to Kings as well as another:
+```{r}
+outlier2 <- which(studRes > 4)
+cdi[outlier2,]
+```
+
+Olmsted is the other outlier
+
+e)
+```{r}
+sigmas <- influence(model7)$sigma
+plot(sigmas ~ cdi$crm1000) 
+plot(sigmas ~ cdi$percapitaincome) 
+plot(sigmas ~ cdi$pop65plus) 
+
+points(outlier, sigmas[outlier], col = "red", pch = 19)
+points(outlier2, sigmas[outlier2], col = "green", pch = 19)
+```
+Again Olmsted and Kings
+
+f)
+```{r}
+D <- cooks.distance(model7)
+Di <- cooks.distance(model7i)
+plot(D ~ cdi$percapitaincome)
+plot(Di ~ cdi[-c(outlier,outlier2),]$percapitaincome)
+plot(D ~ cdi$crm1000)
+plot(Di ~ cdi[-c(outlier,outlier2),]$crm1000)
+plot(D ~ cdi$pop65plus)
+plot(Di ~ cdi[-c(outlier,outlier2),]$pop65plus)
+
+```
+Olmsted and Kings have much larger Cooks distance than any of the other data points.
+
+g)
+```{r}
+betas <- dfbetas(model7)
+plot(betas[,1] ~ cdi$id)
+plot(betas[,2] ~ cdi$id)
+plot(betas[,3] ~ cdi$id)
+plot(betas[,4] ~ cdi$id)
+
+```
+Intercept (beta_0) most affected
+
+h)
+```{r}
+cdi <- cdi[-c(outlier,outlier2),]
+```
+h) b)
+```{r}
+model1 <- lm(log(phys1000) ~ percapitaincome, data = cdi)
+model2 <- lm(log(phys1000) ~ crm1000, data = cdi)
+model3 <- lm(log(phys1000) ~ pop65plus, data = cdi)
+model4 <- lm(log(phys1000) ~ percapitaincome + crm1000, data = cdi)
+model5 <- lm(log(phys1000) ~ percapitaincome + pop65plus, data = cdi)
+model6 <- lm(log(phys1000) ~ crm1000 + pop65plus, data = cdi)
+model7 <- lm(log(phys1000) ~ percapitaincome + crm1000 + pop65plus, data = cdi)
+model8 <- lm(log(phys1000) ~ 1, data = cdi)
+
+r2 = c(
+  summary(model1)$adj.r.squared,
+  summary(model2)$adj.r.squared,
+  summary(model3)$adj.r.squared,
+  summary(model4)$adj.r.squared,
+  summary(model5)$adj.r.squared,
+  summary(model6)$adj.r.squared,
+  summary(model7)$adj.r.squared,
+  summary(model8)$adj.r.squared
+)
+r2
+
+bic = c(
+  AIC(model1, k = log(440)),
+  AIC(model2, k = log(440)),
+  AIC(model3, k = log(440)),
+  AIC(model4, k = log(440)),
+  AIC(model5, k = log(440)),
+  AIC(model6, k = log(440)),
+  AIC(model7, k = log(440)),
+  AIC(model8, k = log(440))
+)
+bic
+```
+Model 7 still best performing
+h) c)
+```{r}
+plot(influence(model7)$hat)
+
+plot(influence(model7)$hat ~cdi$percapitaincome)
+plot(influence(model7)$hat ~cdi$crm1000)
+plot(influence(model7)$hat ~cdi$pop65plus)
+```
+Smaller leverage
+
+h) d)
+```{r}
+studRes <- rstudent(model7)
+plot(studRes ~ cdi$percapitaincome)
+plot(studRes ~ cdi$crm1000)
+plot(studRes ~ cdi$pop65plus)
+
+pred <- predict(model7)
+plot(studRes ~ pred)
+abline(h=c(-2,2))
+
+```
+Looks better!
+
+h) e)
+```{r}
+
+sigmas <- influence(model7)$sigma
+plot(sigmas ~ cdi$crm1000) 
+plot(sigmas ~ cdi$percapitaincome) 
+plot(sigmas ~ cdi$pop65plus) 
+
+```
+Looks better!
+
+h) f)
+```{r}
+D <- cooks.distance(model7)
+plot(D ~ cdi$percapitaincome)
+plot(D ~ cdi$crm1000)
+plot(D ~ cdi$pop65plus)
+
+```
+
+Looks better!

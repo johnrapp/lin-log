@@ -1,0 +1,52 @@
+---
+title: "Labb 2"
+output: html_notebook
+---
+
+
+```{r}
+sleep <- read.delim("sleep.txt")
+sleep$Danger <- factor(sleep$Danger, levels = c(1, 2, 3),
+                       labels = c("low", "medium", "high"))
+```
+a) Frequency table, 17 in low, 24 in medium, 16 in high
+```{r}
+table(sleep$Danger)
+relevel(sleep$Danger,"medium")
+table(sleep$Danger)
+
+```
+
+b) Daily sleep for the danger categories
+```{r}
+
+aggregate(TotalSleep ~ Danger, data = sleep, FUN = "mean")
+plot(sleep$TotalSleep ~ sleep$Danger, xlab = "Danger (from others) category",
+     ylab = "Daily amount of sleep (hours)",
+     main = ("Sleep and danger")) 
+
+```
+
+
+c) Linear Regression Model
+```{r}
+
+DangerVsSleepmodel <- lm(TotalSleep ~ Danger, data = sleep)
+summary(DangerVsSleepmodel)
+```
+
+
+d) ANOVA table shows that the hypothesis beta_1=beta_2=0 can be discarded since the P-value of the F-test is less than 0.001. This means that the danger variable is useful
+
+```{r}
+anova(DangerVsSleepmodel)
+```
+
+
+e) 95% Confidence interval for the betas
+```{r}
+confint(DangerVsSleepmodel)
+
+```
+
+

@@ -1,0 +1,24 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1554065172253.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "94CF6105",
+    "lastKnownWriteTime" : 1554065909,
+    "last_content_update" : 1554065909433,
+    "path" : "~/GitHub/lin-log/Labb 1/Lectures.Rmd",
+    "project_path" : "Lectures.Rmd",
+    "properties" : {
+        "chunk_output_type" : "inline",
+        "cursorPosition" : "179,0",
+        "scrollLine" : "149",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

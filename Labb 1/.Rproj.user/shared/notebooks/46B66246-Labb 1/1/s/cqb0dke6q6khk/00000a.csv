@@ -1,0 +1,2 @@
+"0","model <- lm(pollution ~ vehicles, data = emission)  "
+"0","abline(model, col = ""blue"")"

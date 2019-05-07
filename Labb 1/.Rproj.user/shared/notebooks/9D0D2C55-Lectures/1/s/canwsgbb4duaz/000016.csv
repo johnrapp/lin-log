@@ -1,0 +1,7 @@
+"0","with(icecream, "
+"0","     plot(loss ~ weeks, "
+"0","          xlab = ""time (weeks)"","
+"0","          ylab = ""weight loss (g)"","
+"0","          xlim = c(23, 38),"
+"0","          ylim = c(25, 45), "
+"0","          main = ""Ice cream weight loss""))"

@@ -1,0 +1,7 @@
+"0","with(emission, "
+"0","     plot(pollution ~ vehicles, "
+"0","          xlab = ""Change in flow of vehicles (%)"","
+"0","          ylab = ""Change in level of air pollution (%)"","
+"0","          xlim = c(-24, 63),"
+"0","          ylim = c(-21, 52), "
+"0","          main = ""Ice cream weight loss""))"

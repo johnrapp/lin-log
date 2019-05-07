@@ -1,0 +1,83 @@
+---
+title: "Labb 1"
+output: html_notebook
+---
+
+Insert data
+
+```{r}
+emission <- data.frame(
+  vehicles = c(28, 36, 15, -19, -24, 8, 25, 40, 63, 12, -6, 21),
+  pollution = c(22, 26, 15, -18, -21, 7, 21, 31, 52, 8, -7, 20)
+)
+summary(emission)
+
+```
+
+a) The change in air pollution
+
+b)
+```{r}
+with(emission, 
+     plot(pollution ~ vehicles, 
+          xlab = "Change in flow of vehicles (%)",
+          ylab = "Change in level of air pollution (%)",
+          xlim = c(-24, 63),
+          ylim = c(-21, 52), 
+          main = "Ice cream weight loss"))
+```
+Looks linear!
+
+c) d) e)
+```{r}
+with(emission, 
+     plot(pollution ~ vehicles, 
+          xlab = "Change in flow of vehicles (%)",
+          ylab = "Change in level of air pollution (%)",
+          xlim = c(-24, 63),
+          ylim = c(-21, 52), 
+          main = "Ice cream weight loss"))
+
+model <- lm(pollution ~ vehicles, data = emission)  
+abline(model, col = "blue")
+
+conf <- predict(model, emission, interval = "confidence")
+pred <- predict(model, emission, interval = "prediction")
+with(emission, {
+  lines(vehicles, conf[,'lwr'], lty = 2, col = "red", lwd = 2)
+  lines(vehicles, conf[,'upr'], lty = 2, col = "red", lwd = 2)
+})
+
+```
+Looks reasonable, not too far off!
+
+f)
+```{r}
+e <- model$residuals
+hist(e)
+qqnorm(e)
+qqline(e)
+
+```
+Looks normally distributed
+
+g) 
+```{r}
+summary(model)
+model$coefficients
+var(e)
+```
+h)
+P-value when flow = 0 is 0.271 (p-value for beta0), may not be rejected at e.g. alpha = 0.05
+
+i)
+P-value when flow = 0 is 1.24e-11 (p-value for beta1), may be rejected at e.g. alpha = 0.05
+
+j)
+```{r}
+confint(model)
+```
+
+k)
+Since beta1 = 1 is not within the confidence interval, this hypothesis may be rejected, i.e the data does not support it
+

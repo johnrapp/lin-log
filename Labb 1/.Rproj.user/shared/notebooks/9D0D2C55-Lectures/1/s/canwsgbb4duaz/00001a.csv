@@ -1,0 +1,5 @@
+"0","# add prediction interval lines"
+"0","with(predx, {"
+"0","  lines(weeks, pred.lwr, lty = 3, col = ""blue"", lwd = 2)"
+"0","  lines(weeks, pred.upr, lty = 3, col = ""blue"", lwd = 2)"
+"0","})"
