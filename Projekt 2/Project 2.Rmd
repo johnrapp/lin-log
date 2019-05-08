@@ -9,22 +9,125 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+init
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+```{r}
+library(ggplot2)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+cdi <- read.delim("CDI.txt")
+cdi$region <- factor(cdi$region, levels = c(1, 2, 3, 4),
+                     labels = c("Northeast", "Midwest", "South", "West"))
+cdi$crm1000 <- 1000 * cdi$crimes / cdi$popul
 
-```{r cars}
-summary(cars)
+
+summary(cdi$crm1000)
+median = 52.429
+
+cdi <- cbind(cdi, hicrm = ifelse(cdi$crm1000 < median, 0, 1))
+
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+Plot hicrm against higrads, add a kernel smoother (see the lecture R-code for an example), and determine
+visually whether there might be a relationship. Then fit a logistic regression using higrads as covariate and
+add the estimated probabilities to the plot. Does it seem reasonable?
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+
+```{r}
+with(cdi, {
+   plot(hicrm ~ higrads)
+   lines(ksmooth(higrads, hicrm, bandwidth = 20))
+})
+
+model <- glm(hicrm ~ higrads, data = cdi, family = "binomial")
+summary(model)
+
+x0 <- data.frame(higrads = seq(0, 100, 1))
+
+
+predx <- cbind(x0, prob = predict(model, x0, type = "response"))
+with(predx, lines(higrads, prob, col = "blue"))
+
+# calculate conf.int for the linear part x*beta:
+standard_error <- 1.96
+xb <- predict(model, x0, se.fit = TRUE)
+ci.xb <- data.frame(lwr = xb$fit - standard_error * xb$se.fit,
+                    upr = xb$fit + standard_error * xb$se.fit)
+
+# transform to CI for the odds:
+ci.odds <- exp(ci.xb)
+
+# and finally CI for the probabilities and add to the plot:
+predx <- cbind(predx, ci.odds / (1 + ci.odds))
+with(predx, {
+  lines(higrads, lwr, lty = 2, col = "red")
+  lines(higrads, upr, lty = 2, col = "red")
+})
+
+
+```
+Seems to be relationship
+
+
+Report the β-estimates together with their confidence intervals and test whether the amount of adults with
+12 years in school has a significant effect on the probability of having a higher than median crime rate
+
+
+```{r}
+sum <- summary(model)
+coeff.beta <- model$coefficients
+coeff.beta_odds <- exp(coeff.beta) / (1 + exp(coeff.beta))
+coeff.beta_odds
+
+ci.beta <- confint(model)
+ci.beta_odds <- exp(ci.beta) / (1 + exp(ci.beta))
+```
+Significance!
+
+Estimate the relative change in the odds (odds ratio) of having a high crime rate, with confidence interval,
+when the amount of higrads is increased by 1 (percent), and when it is increased by 10 (percent).
+
+```{r}
+exp(coeff.beta)["higrads"]
+exp(coeff.beta)["higrads"]^10
+
+increase_one_percent <- round((1 - exp(coeff.beta)["higrads"])*100, digits=1)
+increase_ten_percent <- round((1 - exp(coeff.beta)["higrads"]^10)*100, digits=1)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+If higrads increases 1%, odd increases by `r increase_one_percent`%
+If higrads increases 10%, odd increases by `r increase_ten_percent`%
+
+
+Use the model to predict the probability, with confidence interval, of having a high crime rate in a county
+where the amount of higrads is 65 (percent), and where it is 85 (percent).
+```{r}
+x0 <- data.frame(higrads = c(65, 85))
+
+
+predx <- cbind(x0, prob = predict(model, x0, type = "response"))
+
+standard_error <- 1.96
+xb <- predict(model, x0, se.fit = TRUE)
+ci.xb <- data.frame(lwr = xb$fit - standard_error * xb$se.fit,
+                    upr = xb$fit + standard_error * xb$se.fit)
+
+# transform to CI for the odds:
+ci.odds <- exp(ci.xb)
+
+# and finally CI for the probabilities and add to the plot:
+predx <- cbind(predx, ci.odds / (1 + ci.odds))
+
+predx
+```
+
+Use the model to predict, for each of the counties, whether it would be expected to have a low or a high crime
+rate (predicted probability below or above 0.5) and calculate the sensitivity and specificity1
+for this model.
+
+```{r}
+predict_counties <- cbind(cdi, pred_crim = predict(model, cdi$higrads, type = "response"))
+predict_counties
+
+```
+
