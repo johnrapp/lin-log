@@ -126,8 +126,40 @@ rate (predicted probability below or above 0.5) and calculate the sensitivity an
 for this model.
 
 ```{r}
-predict_counties <- cbind(cdi, pred_crim = predict(model, cdi$higrads, type = "response"))
-predict_counties
+
+pred.class <- vector(mode = "numeric", length = 440)
+model.predictions <- predict(model, type = "response")
+
+for(i in 1:440) {
+  if(model.predictions[i] > 0.5) pred.class[i] = 1
+}
+predict_counties <- head(cbind(cdi, pred.class),440)
+
+#Sensitivity level
+tot.hicrm = 0
+pred.hicrm = 0
+for(i in 1:440) {
+  if(predict_counties$hicrm[i] == 1) {
+    tot.hicrm = tot.hicrm + 1
+    if(predict_counties$pred.class[i]==1) pred.hicrm = pred.hicrm +1
+  }
+}
+sens.level = pred.hicrm / tot.hicrm
+  
+
+
+#Specificity level
+tot.hicrm = 0
+pred.hicrm = 0
+for(i in 1:440) {
+  if(predict_counties$hicrm[i] == 0) {
+    tot.hicrm = tot.hicrm +1
+    if(predict_counties$pred.class[i]==0) pred.hicrm = pred.hicrm +1
+  }
+}
+spec.level = pred.hicrm / tot.hicrm
+  
+
+
 
 ```
-
