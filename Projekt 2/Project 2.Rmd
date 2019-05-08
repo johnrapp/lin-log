@@ -1,46 +1,110 @@
 ---
 title: "Project 2"
-author: "Axel Paxel & Johneponne"
+author: "Axel Sjöberg & John Rapp Farnes"
 date: "8 maj 2019"
-output: html_document
+output:
+  pdf_document:
+    fig_caption: true
+    number_sections: true
+classoption:
+  a4paper
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r setup_knitr, include = FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  collapse = TRUE,
+  comment = "#>"
+)
 ```
 
-init
+```{r setup_pdf, eval=FALSE, include = FALSE}
+# Install from CRAN
+install.packages('rmarkdown')
 
-```{r}
+# Render PDF
+install.packages("tinytex")
+tinytex::install_tinytex()  # install TinyTeX
+
+```
+
+# Introduction
+
+In this paper we bla bla
+
+```{r init_vars, include = FALSE}
 library(ggplot2)
+library(knitr)
 
 cdi <- read.delim("CDI.txt")
 cdi$region <- factor(cdi$region, levels = c(1, 2, 3, 4),
                      labels = c("Northeast", "Midwest", "South", "West"))
 cdi$crm1000 <- 1000 * cdi$crimes / cdi$popul
 
-
-summary(cdi$crm1000)
-median = 52.429
+median = summary(cdi$crm1000)["Median"]
 
 cdi <- cbind(cdi, hicrm = ifelse(cdi$crm1000 < median, 0, 1))
 
 ```
 
 
-Plot hicrm against higrads, add a kernel smoother (see the lecture R-code for an example), and determine
-visually whether there might be a relationship. Then fit a logistic regression using higrads as covariate and
-add the estimated probabilities to the plot. Does it seem reasonable?
+## Predicting crime rate based on education level
+
+### Seeing if there is relationship
+
+We saw if there was a relationship by plotting bla bla with kernel smoother.
 
 
-```{r}
+```{r code_plot, fig.width = 8, fig.height = 5, fig.cap = "Bla bla", fig.pos = "h", out.extra = ''}
 with(cdi, {
    plot(hicrm ~ higrads)
    lines(ksmooth(higrads, hicrm, bandwidth = 20))
 })
 
 model <- glm(hicrm ~ higrads, data = cdi, family = "binomial")
-summary(model)
+sum <- summary(model)
+
+x0 <- data.frame(higrads = seq(0, 100, 1))
+
+predx <- cbind(x0, prob = predict(model, x0, type = "response"))
+with(predx, lines(higrads, prob, col = "blue"))
+
+# calculate conf.int for the linear part x*beta:
+standard.error <- 1.96
+xb <- predict(model, x0, se.fit = TRUE)
+ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
+                    upr = xb$fit + standard.error * xb$se.fit)
+
+# transform to CI for the odds:
+ci.odds <- exp(ci.xb)
+
+# and finally CI for the probabilities and add to the plot:
+predx <- cbind(predx, ci.odds / (1 + ci.odds))
+with(predx, {
+  lines(higrads, lwr, lty = 2, col = "red")
+  lines(higrads, upr, lty = 2, col = "red")
+})
+
+```
+
+Seems to be relationship!
+
+KOLLA UTAN BÖRJAN
+
+
+<!--
+Test without beginning
+```{r}
+
+#which(cdi$higrads > 60)
+sliced <- subset.data.frame(cdi, cdi$higrads > 60)
+
+with(sliced, {
+   plot(hicrm ~ higrads)
+   lines(ksmooth(higrads, hicrm, bandwidth = 20))
+})
+
+model <- glm(hicrm ~ higrads, data = sliced, family = "binomial")
 
 x0 <- data.frame(higrads = seq(0, 100, 1))
 
@@ -49,10 +113,10 @@ predx <- cbind(x0, prob = predict(model, x0, type = "response"))
 with(predx, lines(higrads, prob, col = "blue"))
 
 # calculate conf.int for the linear part x*beta:
-standard_error <- 1.96
+standard.error <- 1.96
 xb <- predict(model, x0, se.fit = TRUE)
-ci.xb <- data.frame(lwr = xb$fit - standard_error * xb$se.fit,
-                    upr = xb$fit + standard_error * xb$se.fit)
+ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
+                    upr = xb$fit + standard.error * xb$se.fit)
 
 # transform to CI for the odds:
 ci.odds <- exp(ci.xb)
@@ -66,100 +130,121 @@ with(predx, {
 
 
 ```
-Seems to be relationship
+-->
 
 
-Report the β-estimates together with their confidence intervals and test whether the amount of adults with
+### Confidence intervals and significance
+
+Report the beta-estimates together with their confidence intervals and test whether the amount of adults with
 12 years in school has a significant effect on the probability of having a higher than median crime rate
 
 
-```{r}
-sum <- summary(model)
-coeff.beta <- model$coefficients
-coeff.beta_odds <- exp(coeff.beta) / (1 + exp(coeff.beta))
-coeff.beta_odds
+```{r beta_confidence}
+to.prob = function(odds) {
+  return (odds / (1 + odds))
+}
 
-ci.beta <- confint(model)
-ci.beta_odds <- exp(ci.beta) / (1 + exp(ci.beta))
+coeff.beta <- model$coefficients
+#coeff.beta_odds <- to.prob(exp(coeff.beta))
+#coeff.beta_odds
+
+ci.beta <- suppressMessages(confint(model))
+#ci.beta_odds <- to.prob(exp(ci.beta))
+#ci.beta_odds
+
+table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta)
+row.names(table.beta.ci) <- c("$\\beta_0$", "$\\beta_1$")
+
+kable(table.beta.ci, caption = "Test")
+
+
 ```
+
+
+```{r beta_significance}
+
+table.beta.p <- data.frame(p = sum$coefficients[, "Pr(>|z|)"])
+row.names(table.beta.p) <- c("$\\beta_0$", "$\\beta_1$")
+
+kable(table.beta.p, col.names = "P-value", caption = "Test")
+
+```
+
 Significance!
+
+### Change in odds
 
 Estimate the relative change in the odds (odds ratio) of having a high crime rate, with confidence interval,
 when the amount of higrads is increased by 1 (percent), and when it is increased by 10 (percent).
 
-```{r}
-exp(coeff.beta)["higrads"]
-exp(coeff.beta)["higrads"]^10
+```{r beta_decrease, include = F}
+beta.higrads <- exp(coeff.beta["higrads"])
 
-increase_one_percent <- round((1 - exp(coeff.beta)["higrads"])*100, digits=1)
-increase_ten_percent <- round((1 - exp(coeff.beta)["higrads"]^10)*100, digits=1)
+decrease.one.percent <- 1 - beta.higrads
+decrease.ten.percent <- 1 - beta.higrads^10
+
+display.percent <- function(value) {
+  return(round(value * 100, digits=1))
+}
 ```
 
-If higrads increases 1%, odd increases by `r increase_one_percent`%
-If higrads increases 10%, odd increases by `r increase_ten_percent`%
+If higrads increases 1%, odd decreases by `r display.percent(decrease.one.percent)`%
+If higrads increases 10%, odd decreases by `r display.percent(decrease.ten.percent)`%
 
+
+### Predict
 
 Use the model to predict the probability, with confidence interval, of having a high crime rate in a county
 where the amount of higrads is 65 (percent), and where it is 85 (percent).
-```{r}
+```{r predict}
 x0 <- data.frame(higrads = c(65, 85))
 
 
 predx <- cbind(x0, prob = predict(model, x0, type = "response"))
 
-standard_error <- 1.96
+standard.error <- 1.96
 xb <- predict(model, x0, se.fit = TRUE)
-ci.xb <- data.frame(lwr = xb$fit - standard_error * xb$se.fit,
-                    upr = xb$fit + standard_error * xb$se.fit)
-
+ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
+                    upr = xb$fit + standard.error * xb$se.fit)
 # transform to CI for the odds:
 ci.odds <- exp(ci.xb)
 
 # and finally CI for the probabilities and add to the plot:
-predx <- cbind(predx, ci.odds / (1 + ci.odds))
+predx <- cbind(predx, to.prob(ci.odds))
 
-predx
+kable(predx, col.names = c("Higrads", "Probability", "2.5 %", "97.5 %"), caption = "Test")
 ```
 
-Use the model to predict, for each of the counties, whether it would be expected to have a low or a high crime
-rate (predicted probability below or above 0.5) and calculate the sensitivity and specificity1
-for this model.
+Use the model to predict, for each of the counties, whether it would be expected to have a low or a high crime 
+rate (predicted probability below or above 0.5) and calculate the sensitivity and specificity for this model.
 
-```{r}
-
-pred.class <- vector(mode = "numeric", length = 440)
-model.predictions <- predict(model, type = "response")
-
-for(i in 1:440) {
-  if(model.predictions[i] > 0.5) pred.class[i] = 1
-}
-predict_counties <- head(cbind(cdi, pred.class),440)
-
-#Sensitivity level
-tot.hicrm = 0
-pred.hicrm = 0
-for(i in 1:440) {
-  if(predict_counties$hicrm[i] == 1) {
-    tot.hicrm = tot.hicrm + 1
-    if(predict_counties$pred.class[i]==1) pred.hicrm = pred.hicrm +1
-  }
-}
-sens.level = pred.hicrm / tot.hicrm
-  
+Sensitivity is the proportion of the true successes that have been correctly classified as successes (true positive).
+Specificity is the proportion of the true failures that have been correctly classified as failures (true negatives).
 
 
-#Specificity level
-tot.hicrm = 0
-pred.hicrm = 0
-for(i in 1:440) {
-  if(predict_counties$hicrm[i] == 0) {
-    tot.hicrm = tot.hicrm +1
-    if(predict_counties$pred.class[i]==0) pred.hicrm = pred.hicrm +1
-  }
-}
-spec.level = pred.hicrm / tot.hicrm
-  
+```{r pred_sense_spec, include = F}
 
+pred.counties <- subset(cdi, select = c(county, higrads, hicrm))
+
+pred.counties <- cbind(pred.counties, prob.hicrm = predict(model, pred.counties, type = "response"))
+pred.counties <- cbind(pred.counties, pred.hicrm = ifelse(pred.counties$prob.hicrm > 0.5, 1, 0))
+
+pred.counties
+
+num.hicrm <- sum(pred.counties$hicrm)
+
+# Sensitivity
+true.postive <- with(pred.counties, ifelse(pred.hicrm == 1 & hicrm == 1, 1, 0))
+sensitivity <- sum(true.postive) / num.hicrm
+sensitivity
+
+true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
+specificity <- sum(true.negative) / num.hicrm
+specificity
 
 
 ```
+
+Sensitivity was `r display.percent(sensitivity)`%
+
+Specificity was `r display.percent(specificity)`%
