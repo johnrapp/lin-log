@@ -6,6 +6,8 @@ output:
   pdf_document:
     fig_caption: true
     number_sections: true
+    toc: true
+    toc_depth: 3
 classoption:
   a4paper
 ---
@@ -28,6 +30,8 @@ tinytex::install_tinytex()  # install TinyTeX
 
 ```
 
+\newpage
+
 # Introduction
 
 In this paper we bla bla
@@ -48,6 +52,8 @@ cdi <- cbind(cdi, hicrm = ifelse(cdi$crm1000 < median, 0, 1))
 
 ```
 
+
+# Analysis
 
 ## Predicting crime rate based on education level
 
@@ -240,3 +246,82 @@ specificity
 Sensitivity was `r display.percent(sensitivity)`%
 
 Specificity was `r display.percent(specificity)`%
+
+## Predicting crime rate based on region
+
+Make a cross-tabulation between region and hicrm. Choose as reference region in your regression models
+the one that has the largest number of counties in it’s smallest low/high category. As a tie-breaker, use the
+other low/high category. Why is this a good idea? Hint: look at how the standard errors for the log odds
+(ratios) are calculated in this situation.
+
+```{r cross_tabulation}
+
+cross.table <- table(cdi %>% select(region, hicrm))
+
+kable(cross.table, col.names = c("Low crime", "High crime"), caption = "Test")
+
+reference.level <- "Northeast"
+
+#prop.table(cross.table)
+#prop.table(cross.table, 1)
+#prop.table(cross.table, 2)
+
+```
+
+Set the reference level to `r reference.level`, makes sense to get low SE
+
+
+
+Fit a logistic regression using region as (categorical) covariate and report the beta-estimates together with their
+confidence intervals. Test whether there are any significant differences between the regions in the probability
+of having a high crime rate.
+
+```{r region_beta}
+# Set reference
+cdi$region <- relevel(cdi$region, ref = reference.level)
+
+model <- glm(hicrm ~ region, data = cdi, family = "binomial")
+sum <- summary(model)
+
+coeff.beta <- model$coefficients
+
+ci.beta <- suppressMessages(confint(model))
+
+beta.p <- sum$coefficients[, "Pr(>|z|)"] * 100
+
+table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta, "P-value (%)" = beta.p)
+row.names(table.beta.ci) <- c("$\\beta_0$", "$\\beta_1$", "$\\beta_2$", "$\\beta_3$")
+
+kable(table.beta.ci, caption = "Test", digits = 3)
+
+```
+
+Significant!
+
+
+Estimate the odds ratios for having a high crime rate, with confidence interval, for the different regions,
+compared to the reference region. Also estimate the probability of having a high crime rate, with confidence
+interval, for the different regions, including the reference region.
+Calculate the sensitivity and specificity for this model. If we are allowed to have either higrads or region
+as covariate, which one should we choose?
+
+
+```{r beta_decreases}
+beta.region <- exp(coeff.beta)
+
+table.beta.ci <- cbind("OR" = exp(coeff.beta), exp(ci.beta))
+row.names(table.beta.ci) <- c("$\\beta_0$", "$\\beta_1$", "$\\beta_2$", "$\\beta_3$")
+
+kable(table.beta.ci, caption = "Test", digits = 3)
+
+
+```
+
+If higrads increases 1%, odd decreases by `r display.percent(decrease.one.percent)`%
+If higrads increases 10%, odd decreases by `r display.percent(decrease.ten.percent)`%
+
+
+```{r sense_spec}
+
+```
+
