@@ -406,6 +406,21 @@ compare.models <- data.frame(
 
 compare.models
 
+# # Pseudo R2
+# # Likelihood = exp(-deviance/2)
+# L0 <- exp(-model.0$deviance/2)
+# R2max <- 1 - L0^(2/n)
+# L <- exp(-c(model.0$deviance, model.banana$deviance, model.apple$deviance,
+#             model.melon$deviance, model$deviance)/2)
+# R2CS <- 1 - (L0/L)^(2/n)
+# R2N <- R2CS/R2max
+# 
+# R2 <- round(100*cbind(R2CS, R2N), 2)
+# row.names(R2) <- c("model.0", "model.banana", "model.apple", "model.melon",
+#                    "model.full")
+# R2
+# 100*R2max
+# 
 
 ```
 
@@ -414,7 +429,42 @@ compare.models
 ### Comparing models
 ```{r}
 
-
+# ### a "logical" plot-order:
+# ordning <- c(1, 2, 3, 4, 5, 8, 7, 6, 9, 10, 11, 12)
+# samlat[ordning, ]
+# 
+# ### create the plots on page 15 and 16:
+# antal <- nrow(samlat)
+# x <- 1:antal
+# with(samlat[ordning,], {
+#   plot(x, rep(0, antal), type = "n", ylim = c(0, 1), xaxt = "n",
+#        ylab = "R2/R2-adjusted", xlab = "model",
+#        main = "Coefficient of determination")
+#   axis(1, at = x, labels = modname)
+#   lines(x, r2, col = "red", lty = 2, lwd = 2)
+#   lines(x, r2adj, col = "blue", lty = 1, lwd = 2)
+#   points(x[sig], r2adj[sig], col = "blue", pch = 16)
+#   points(x[sig], r2[sig], col = "red", pch = 16)
+# })
+# legend(1, 1, c("R2", "R2-adj", "all sign."),
+#        col = c("red", "blue", "black"),
+#        lty = c(2, 1, 0), pch = c(NA, NA, 16), lwd = c(2, 2, 0))
+# 
+# ## check that AIC and BIC fit withing the min-max-limits:
+# summary(samlat)
+# with(samlat[ordning,], {
+#   plot(x, rep(0, antal), type = "n", ylim = c(75, 95), xaxt = "n",
+#        ylab = "AIC and BIC", xlab = "model",
+#        main = "Information criteria")
+#   axis(1, at = x, labels = modname)
+#   lines(x, aic, col = "red", lty = 2, lwd = 2)
+#   lines(x, bic, col = "blue", lty = 1, lwd = 2)
+#   points(x[sig], aic[sig], col = "red", pch = 16)
+#   points(x[sig], bic[sig], col = "blue", pch = 16)
+# })
+# legend(9, 95, c("AIC", "BIC", "all sign."),
+#        col = c("red", "blue", "black"),
+#        lty = c(2, 1, 0), pch = c(NA, NA, 16), lwd = c(2, 2, 0))
 
 
 ```
