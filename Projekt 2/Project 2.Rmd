@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup_pdf, eval=FALSE, include = FALSE}
+```{r setup_pdf, eval = FALSE}
 # Install from CRAN
 install.packages('rmarkdown')
 
@@ -35,6 +35,7 @@ In this paper we bla bla
 ```{r init_vars, include = FALSE}
 library(ggplot2)
 library(knitr)
+library(dplyr)
 
 cdi <- read.delim("CDI.txt")
 cdi$region <- factor(cdi$region, levels = c(1, 2, 3, 4),
@@ -152,23 +153,15 @@ ci.beta <- suppressMessages(confint(model))
 #ci.beta_odds <- to.prob(exp(ci.beta))
 #ci.beta_odds
 
-table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta)
+beta.p <- sum$coefficients[, "Pr(>|z|)"] * 100
+
+table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta, "P-value (%)" = beta.p)
 row.names(table.beta.ci) <- c("$\\beta_0$", "$\\beta_1$")
 
-kable(table.beta.ci, caption = "Test")
-
-
-```
-
-
-```{r beta_significance}
-
-table.beta.p <- data.frame(p = sum$coefficients[, "Pr(>|z|)"])
-row.names(table.beta.p) <- c("$\\beta_0$", "$\\beta_1$")
-
-kable(table.beta.p, col.names = "P-value", caption = "Test")
+kable(table.beta.ci, caption = "Test", digits = 3)
 
 ```
+
 
 Significance!
 
@@ -241,7 +234,6 @@ sensitivity
 true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
 specificity <- sum(true.negative) / num.hicrm
 specificity
-
 
 ```
 
