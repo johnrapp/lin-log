@@ -300,28 +300,104 @@ Significant!
 
 
 Estimate the odds ratios for having a high crime rate, with confidence interval, for the different regions,
-compared to the reference region. Also estimate the probability of having a high crime rate, with confidence
-interval, for the different regions, including the reference region.
-Calculate the sensitivity and specificity for this model. If we are allowed to have either higrads or region
-as covariate, which one should we choose?
+compared to the reference region.
+
 
 
 ```{r beta_decreases}
 beta.region <- exp(coeff.beta)
 
 table.beta.ci <- cbind("OR" = exp(coeff.beta), exp(ci.beta))
-row.names(table.beta.ci) <- c("$\\beta_0$", "$\\beta_1$", "$\\beta_2$", "$\\beta_3$")
+table.beta.ci <- table.beta.ci[-c(1), ]
+row.names(table.beta.ci) <- c("South", "Midwest", "West")
 
-kable(table.beta.ci, caption = "Test", digits = 3)
+kable(table.beta.ci, caption = "Test", digits = 1)
 
 
 ```
 
-If higrads increases 1%, odd decreases by `r display.percent(decrease.one.percent)`%
-If higrads increases 10%, odd decreases by `r display.percent(decrease.ten.percent)`%
+
+Also estimate the probability of having a high crime rate, with confidence interval, for the different regions, including the reference region.
 
 
-```{r sense_spec}
+Calculate the sensitivity and specificity for this model. If we are allowed to have either higrads or region
+as covariate, which one should we choose?
+
+
+```{r pred_sense_spec}
+
+pred.counties <- subset(cdi, select = c(county, region, hicrm))
+
+regions <- c("Northeast", "Midwest", "South", "West")
+
+x0 <- data.frame(region = regions)
+
+pred <- predict(model, x0, se.fit = TRUE, type = "response")
+pred$fit
+pred$se.fit
+
+
+## confidence interval for log-odds
+ci.prob <- cbind(lo = pred$fit - standard.error * pred$se.fit, 
+                    hi = pred$fit + standard.error * pred$se.fit)
+
+
+# 
+# pred.counties <- cbind(pred.counties, prob.hicrm = predict(model, pred.counties, type = "response"))
+# pred.counties <- cbind(pred.counties, pred.hicrm = ifelse(pred.counties$prob.hicrm > 0.5, 1, 0))
+# 
+# pred.counties
+# 
+# table(pred.counties$region, pred.counties$prob.hicrm)
+# 
+# num.hicrm <- sum(pred.counties$hicrm)
+# 
+# # Sensitivity
+# true.postive <- with(pred.counties, ifelse(pred.hicrm == 1 & hicrm == 1, 1, 0))
+# sensitivity <- sum(true.postive) / num.hicrm
+# sensitivity
+# 
+# true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
+# specificity <- sum(true.negative) / num.hicrm
+# specificity
+# 
+# 
+# #Estimate the intervals as in the PP
+# beta.hats <- c(coeff.beta[1], coeff.beta[1] + coeff.beta[2], coeff.beta[1] + coeff.beta[3], coeff.beta[1] + coeff.beta[4])
+# 
+# beta.hats
+# 
+# p.ests  <- data.frame(name = c("Northeast", "Souht", "Midwest", "West"),
+#                       n0 = c(cross.table[1,1], cross.table[2,1], cross.table[3,1], cross.table[4,1]),
+#                       n1 = c(cross.table[1,2], cross.table[2,2], cross.table[3,2], cross.table[4,2]))
+# p.ests$n <- p.ests$n0 + p.ests$n1
+# p.ests$phat <- p.ests$n1 / p.ests$n
+# p.ests$npq <- p.ests$n * p.ests$phat * (1 - p.ests$phat)
+# p.ests$se <- sqrt(p.ests$phat * (1 - p.ests$phat) / p.ests$n)
+# p.ests$lo <- p.ests$phat - 1.96 * p.ests$se
+# p.ests$hi <- p.ests$phat + 1.96 * p.ests$se
+# p.ests
+# 
+# 
+# #CI for the log-odds
+# se.b0 <- sqrt(1 / p.ests$n0[1] + 1 / p.ests$n1[1])
+# se.b1 <- sqrt(1 / p.ests$n0[1] + 1 / p.ests$n1[1] + 1 / p.ests$n0[2] + 
+#                 1 / p.ests$n1[2])
+# se.b2 <- sqrt(1 / p.ests$n0[1] + 1 / p.ests$n1[1] + 1 / p.ests$n0[3] + 
+#                 1 / p.ests$n1[3])
+# se.b3 <- sqrt(1 / p.ests$n0[1] + 1 / p.ests$n1[1] + 1 / p.ests$n0[4] + 
+#                 1 / p.ests$n1[4])
+# ci.beta <- rbind(model$coefficients[1] + 1.96 * se.b0 * c(-1, 1),
+#                  model$coefficients[2] + 1.96 * se.b1 * c(-1, 1),
+#                  model$coefficients[3] + 1.96 * se.b2 *c(-1, 1),
+#                  model$coefficients[4] + 1.96 * se.b2 *c(-1, 1))
+# ci.beta
+# 
+# 
+# exp(ci.beta)
+
+
+
+
 
 ```
-
