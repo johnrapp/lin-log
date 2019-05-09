@@ -18,6 +18,8 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+
+knitr::read_chunk('lib.R')
 ```
 
 ```{r setup_pdf, eval = FALSE}
@@ -30,16 +32,13 @@ tinytex::install_tinytex()  # install TinyTeX
 
 ```
 
-\newpage
-
-# Introduction
-
-In this paper we bla bla
 
 ```{r init_vars, include = FALSE}
 library(ggplot2)
 library(knitr)
 library(dplyr)
+library(rlist)
+library(purrr)
 
 cdi <- read.delim("CDI.txt")
 cdi$region <- factor(cdi$region, levels = c(1, 2, 3, 4),
@@ -49,8 +48,13 @@ cdi$crm1000 <- 1000 * cdi$crimes / cdi$popul
 median = summary(cdi$crm1000)["Median"]
 
 cdi <- cbind(cdi, hicrm = ifelse(cdi$crm1000 < median, 0, 1))
-
 ```
+
+\newpage
+
+# Introduction
+
+In this paper we bla bla
 
 
 # Analysis
@@ -68,17 +72,17 @@ with(cdi, {
    lines(ksmooth(higrads, hicrm, bandwidth = 20))
 })
 
-model <- glm(hicrm ~ higrads, data = cdi, family = "binomial")
-sum <- summary(model)
+model.higrads <- glm(hicrm ~ higrads, data = cdi, family = "binomial")
+sum <- summary(model.higrads)
 
 x0 <- data.frame(higrads = seq(0, 100, 1))
 
-predx <- cbind(x0, prob = predict(model, x0, type = "response"))
+predx <- cbind(x0, prob = predict(model.higrads, x0, type = "response"))
 with(predx, lines(higrads, prob, col = "blue"))
 
 # calculate conf.int for the linear part x*beta:
 standard.error <- 1.96
-xb <- predict(model, x0, se.fit = TRUE)
+xb <- predict(model.higrads, x0, se.fit = TRUE)
 ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
                     upr = xb$fit + standard.error * xb$se.fit)
 
@@ -99,47 +103,6 @@ Seems to be relationship!
 KOLLA UTAN BÖRJAN
 
 
-<!--
-Test without beginning
-```{r}
-
-#which(cdi$higrads > 60)
-sliced <- subset.data.frame(cdi, cdi$higrads > 60)
-
-with(sliced, {
-   plot(hicrm ~ higrads)
-   lines(ksmooth(higrads, hicrm, bandwidth = 20))
-})
-
-model <- glm(hicrm ~ higrads, data = sliced, family = "binomial")
-
-x0 <- data.frame(higrads = seq(0, 100, 1))
-
-
-predx <- cbind(x0, prob = predict(model, x0, type = "response"))
-with(predx, lines(higrads, prob, col = "blue"))
-
-# calculate conf.int for the linear part x*beta:
-standard.error <- 1.96
-xb <- predict(model, x0, se.fit = TRUE)
-ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
-                    upr = xb$fit + standard.error * xb$se.fit)
-
-# transform to CI for the odds:
-ci.odds <- exp(ci.xb)
-
-# and finally CI for the probabilities and add to the plot:
-predx <- cbind(predx, ci.odds / (1 + ci.odds))
-with(predx, {
-  lines(higrads, lwr, lty = 2, col = "red")
-  lines(higrads, upr, lty = 2, col = "red")
-})
-
-
-```
--->
-
-
 ### Confidence intervals and significance
 
 Report the beta-estimates together with their confidence intervals and test whether the amount of adults with
@@ -151,13 +114,9 @@ to.prob = function(odds) {
   return (odds / (1 + odds))
 }
 
-coeff.beta <- model$coefficients
-#coeff.beta_odds <- to.prob(exp(coeff.beta))
-#coeff.beta_odds
+coeff.beta <- model.higrads$coefficients
 
-ci.beta <- suppressMessages(confint(model))
-#ci.beta_odds <- to.prob(exp(ci.beta))
-#ci.beta_odds
+ci.beta <- suppressMessages(confint(model.higrads))
 
 beta.p <- sum$coefficients[, "Pr(>|z|)"] * 100
 
@@ -199,10 +158,10 @@ where the amount of higrads is 65 (percent), and where it is 85 (percent).
 x0 <- data.frame(higrads = c(65, 85))
 
 
-predx <- cbind(x0, prob = predict(model, x0, type = "response"))
+predx <- cbind(x0, prob = predict(model.higrads, x0, type = "response"))
 
 standard.error <- 1.96
-xb <- predict(model, x0, se.fit = TRUE)
+xb <- predict(model.higrads, x0, se.fit = TRUE)
 ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
                     upr = xb$fit + standard.error * xb$se.fit)
 # transform to CI for the odds:
@@ -225,7 +184,7 @@ Specificity is the proportion of the true failures that have been correctly clas
 
 pred.counties <- subset(cdi, select = c(county, higrads, hicrm))
 
-pred.counties <- cbind(pred.counties, prob.hicrm = predict(model, pred.counties, type = "response"))
+pred.counties <- cbind(pred.counties, prob.hicrm = predict(model.higrads, pred.counties, type = "response"))
 pred.counties <- cbind(pred.counties, pred.hicrm = ifelse(pred.counties$prob.hicrm > 0.5, 1, 0))
 
 pred.counties
@@ -234,18 +193,18 @@ num.hicrm <- sum(pred.counties$hicrm)
 
 # Sensitivity
 true.postive <- with(pred.counties, ifelse(pred.hicrm == 1 & hicrm == 1, 1, 0))
-sensitivity <- sum(true.postive) / num.hicrm
-sensitivity
+sensitivity.higrads <- sum(true.postive) / num.hicrm
+sensitivity.higrads
 
 true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
-specificity <- sum(true.negative) / num.hicrm
-specificity
+specificity.higrads <- sum(true.negative) / num.hicrm
+specificity.higrads
 
 ```
 
-Sensitivity was `r display.percent(sensitivity)`%
+Sensitivity was `r display.percent(sensitivity.higrads)`%
 
-Specificity was `r display.percent(specificity)`%
+Specificity was `r display.percent(specificity.higrads)`%
 
 ## Predicting crime rate based on region
 
@@ -280,12 +239,12 @@ of having a high crime rate.
 # Set reference
 cdi$region <- relevel(cdi$region, ref = reference.level)
 
-model <- glm(hicrm ~ region, data = cdi, family = "binomial")
-sum <- summary(model)
+model.region <- glm(hicrm ~ region, data = cdi, family = "binomial")
+sum <- summary(model.region)
 
-coeff.beta <- model$coefficients
+coeff.beta <- model.region$coefficients
 
-ci.beta <- suppressMessages(confint(model))
+ci.beta <- suppressMessages(confint(model.region))
 
 beta.p <- sum$coefficients[, "Pr(>|z|)"] * 100
 
@@ -324,7 +283,7 @@ Calculate the sensitivity and specificity for this model. If we are allowed to h
 as covariate, which one should we choose?
 
 
-```{r pred_sense_spec}
+```{r pred_sense_spec2}
 
 pred.counties <- subset(cdi, select = c(county, region, hicrm))
 
@@ -332,16 +291,147 @@ regions <- c("Northeast", "Midwest", "South", "West")
 
 x0 <- data.frame(region = regions)
 
-pred <- predict(model, x0, se.fit = TRUE, type = "response")
-pred$fit
-pred$se.fit
+pred <- predict(model.region, x0, se.fit = TRUE, type = "response")
 
 
 ## confidence interval for log-odds
-ci.prob <- cbind(lo = pred$fit - standard.error * pred$se.fit, 
-                    hi = pred$fit + standard.error * pred$se.fit)
+ci.prob <- cbind("2.5 %" = pred$fit - standard.error * pred$se.fit, 
+                "97.5 %" = pred$fit + standard.error * pred$se.fit)
+
+
+table.prob.ci <- cbind("Estimate" = pred$fit * 100, ci.prob * 100)
+row.names(table.prob.ci) <- regions
+
+kable(table.prob.ci, caption = "Test", digits = 1)
+
+
+```
+
+```{r pred_sense_spec3, include = F}
+
+pred.counties <- subset(cdi, select = c(county, region, hicrm))
+
+pred.counties <- cbind(pred.counties, prob.hicrm = predict(model.region, pred.counties, type = "response"))
+pred.counties <- cbind(pred.counties, pred.hicrm = ifelse(pred.counties$prob.hicrm > 0.5, 1, 0))
+
+pred.counties
+
+num.hicrm <- sum(pred.counties$hicrm)
+
+# Sensitivity
+true.postive <- with(pred.counties, ifelse(pred.hicrm == 1 & hicrm == 1, 1, 0))
+sensitivity.region <- sum(true.postive) / num.hicrm
+sensitivity.region
+
+true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
+specificity.region <- sum(true.negative) / num.hicrm
+specificity.region
+
+```
+
+Sensitivity was `r display.percent(sensitivity.region)`%
+
+Specificity was `r display.percent(specificity.region)`%
+
+```{r pred_sense_spec4}
+
+compare.sense <- data.frame(
+  "Covariate" = c("Higrads", "Region"),
+  "Sensitivity" = c(sensitivity.higrads, sensitivity.region),
+  "Specificity" = c(specificity.higrads, specificity.region)
+);
+kable(compare.sense, caption = "Test", digits = 2)
+
+```
+
+Would prefer region
+
+## Predicting crime rate based on region and higrads
+
+Fit a third model using both higrads and region. For all three models, report their AIC, BIC, Nagelkerke
+pseudo R^2, sensitivity and specificity. Which model is best?
+
+```{r}
+model.region.higrads <- glm(hicrm ~ higrads + region, data = cdi, family = "binomial")
+
+
+model.names <- c("Higrads", "Region", "Both")
+models <- list(model.higrads, model.region, model.region.higrads)
+
+models
+
+aic <- do.call(AIC, models)
+#calc.aic <- AIC(models)
+
+calc.aic <- do.call(AIC, models)$AIC
+calc.bic <- do.call(AIC, c(models, list(k = log(nrow(cdi)))))$AIC
+     
+calc.metrics = function(model) {
+  pred.counties <- cdi
+
+  pred.counties <- cbind(pred.counties, prob.hicrm = predict(model, pred.counties, type = "response"))
+  pred.counties <- cbind(pred.counties, pred.hicrm = ifelse(pred.counties$prob.hicrm > 0.5, 1, 0))
+  
+  num.hicrm <- sum(pred.counties$hicrm)
+  
+  # Sensitivity
+  true.postive <- with(pred.counties, ifelse(pred.hicrm == 1 & hicrm == 1, 1, 0))
+  sensitivity <- sum(true.postive) / num.hicrm
+  sensitivity
+  
+  # Specificity
+  true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
+  specificity <- sum(true.negative) / num.hicrm
+  specificity
+  
+  metrics <- data.frame(
+    sensitivity,
+    specificity
+  )
+  
+  return(metrics)
+}
+
+metrics <- sapply(models, calc.metrics)
+
+compare.models <- data.frame(
+  model = model.names,
+  aic = calc.aic,
+  bic = calc.bic,
+  sensitivity = unlist(metrics["sensitivity",]),
+  specificity = unlist(metrics["specificity",])
+)
+
+# models %>% map(function(model) model$coefficients)
+
+compare.models
+
+
+```
+
+
+
+### Comparing models
+```{r}
 
 
 
 
 ```
+
+### Plot & skit
+Use the third model and plot the squared standardized Pearson residuals and the standardized deviance residuals against the linear predictor x^beta. Is
+there anything alarming here? Plot Cook’s distance against the linear predictor, as well as against higrads
+and against region. Any interesting finds?
+
+
+### Interaction
+One might suspect that the effect of higrads is different in different regions. Fit at fourth model adding the
+interaction higrads * region to the third model, and use a Likelihood ratio test in order to determine
+whether this is significantly better. Also calculate AIC, BIC, Nagelkerke, sensitivity and specificity and plot
+the residuals and Cook’s distance. Do the interaction terms improve the model?
+
+# Other variables
+Find a better model using combinations of the variables higrads, region, poors and
+phys1000 = 1000*phys/popul (see Lab 3). You may ignore interactions. Motivate why your model
+is better.
