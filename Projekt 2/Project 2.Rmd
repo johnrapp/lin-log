@@ -1,17 +1,17 @@
 ---
 title: "Project 2"
-author: "Axel SjÃ¶berg & John Rapp Farnes"
+author: "Axel SjÃƒÂ¶berg & John Rapp Farnes"
 date: "8 maj 2019"
 output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
   pdf_document:
     fig_caption: yes
     number_sections: yes
     toc: yes
     toc_depth: 3
-  html_document:
-    df_print: paged
-    toc: yes
-    toc_depth: '3'
 classoption: a4paper
 ---
 
@@ -21,8 +21,6 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
-
-knitr::read_chunk('lib.R')
 ```
 
 ```{r setup_pdf, eval = FALSE}
@@ -350,6 +348,8 @@ kable(compare.sense, caption = "Test", digits = 2)
 
 Would prefer region
 
+#ASD ASD
+
 ## Predicting crime rate based on region and higrads
 
 Fit a third model using both higrads and region. For all three models, report their AIC, BIC, Nagelkerke
@@ -419,7 +419,7 @@ compare.models
 
 
 ### Comparing models
-```{r, fig.width = 8, fig.height = 5, fig.cap = "Bla bla", fig.pos = "h", out.extra = ''}
+```{r comparison_plot, fig.width = 8, fig.height = 5, fig.cap = "Bla bla", fig.pos = "h", out.extra = ''}
 
 n <- nrow(compare.models)
 x <- 1:n
