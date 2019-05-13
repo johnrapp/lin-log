@@ -58,7 +58,23 @@ median = summary(cdi$crm1000)["Median"]
 cdi <- cbind(cdi, hicrm = ifelse(cdi$crm1000 < median, 0, 1))
 ```
 
+
 \newpage
+
+
+Structure:
+Introduction:
+  Uppgiften
+  Dataset
+  Modellen
+  
+Analysis:
+  Higrad model:
+    Introduction
+    Results
+  Region model:
+  Integration model:
+  Determining best model:
 
 # Introduction
 
