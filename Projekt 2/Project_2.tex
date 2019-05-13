@@ -25,7 +25,7 @@
 \usepackage{hyperref}
 \hypersetup{unicode=true,
             pdftitle={Project 2},
-            pdfauthor={Axel Sjöberg \& John Rapp Farnes},
+            pdfauthor={Axel SjÃ¶berg \& John Rapp Farnes},
             pdfborder={0 0 0},
             breaklinks=true}
 \urlstyle{same}  % don't use monospace font for urls
@@ -78,7 +78,7 @@
   \title{Project 2}
     \pretitle{\vspace{\droptitle}\centering\huge}
   \posttitle{\par}
-    \author{Axel Sjöberg \& John Rapp Farnes}
+    \author{Axel SjÃ¶berg \& John Rapp Farnes}
     \preauthor{\centering\large\emph}
   \postauthor{\par}
       \predate{\centering\large\emph}
@@ -95,21 +95,17 @@
 }
 \newpage
 
-\hypertarget{introduction}{%
-\section{Introduction}\label{introduction}}
+\section{Introduction}\label{introduction}
 
 In this paper we bla bla
 
-\hypertarget{analysis}{%
-\section{Analysis}\label{analysis}}
+\section{Analysis}\label{analysis}
 
-\hypertarget{predicting-crime-rate-based-on-education-level}{%
 \subsection{Predicting crime rate based on education
-level}\label{predicting-crime-rate-based-on-education-level}}
+level}\label{predicting-crime-rate-based-on-education-level}
 
-\hypertarget{seeing-if-there-is-relationship}{%
 \subsubsection{Seeing if there is
-relationship}\label{seeing-if-there-is-relationship}}
+relationship}\label{seeing-if-there-is-relationship}
 
 We saw if there was a relationship by plotting bla bla with kernel
 smoother.
@@ -122,11 +118,8 @@ Seems to be relationship!
 
 KOLLA UTAN BÖRJAN
 
---\textgreater{}
-
-\hypertarget{confidence-intervals-and-significance}{%
 \subsubsection{Confidence intervals and
-significance}\label{confidence-intervals-and-significance}}
+significance}\label{confidence-intervals-and-significance}
 
 Report the beta-estimates together with their confidence intervals and
 test whether the amount of adults with 12 years in school has a
@@ -143,25 +136,23 @@ crime rate
 & Estimate & 2.5 \% & 97.5 \% & P-value (\%)\tabularnewline
 \midrule
 \endhead
-\(\beta_0\) & 3.866 & 1.527 & 6.27 & 0.044\tabularnewline
-\(\beta_1\) & -0.050 & -0.081 & -0.02 & 0.041\tabularnewline
+\(\beta_0\) & 3.980 & 1.805 & 6.250 & 0.044\tabularnewline
+\(\beta_1\) & -0.051 & -0.080 & -0.023 & 0.041\tabularnewline
 \bottomrule
 \end{longtable}
 
 Significance!
 
-\hypertarget{change-in-odds}{%
-\subsubsection{Change in odds}\label{change-in-odds}}
+\subsubsection{Change in odds}\label{change-in-odds}
 
 Estimate the relative change in the odds (odds ratio) of having a high
 crime rate, with confidence interval, when the amount of higrads is
 increased by 1 (percent), and when it is increased by 10 (percent).
 
-If higrads increases 1\%, odd decreases by 4.9\% If higrads increases
-10\%, odd decreases by 39.2\%
+If higrads increases 1\%, odd decreases by 5\% If higrads increases
+10\%, odd decreases by 40.1\%
 
-\hypertarget{predict}{%
-\subsubsection{Predict}\label{predict}}
+\subsubsection{Predict}\label{predict}
 
 Use the model to predict the probability, with confidence interval, of
 having a high crime rate in a county where the amount of higrads is 65
@@ -177,8 +168,8 @@ Higrads & Probability & 2.5 \% & 97.5 \%\tabularnewline
 Higrads & Probability & 2.5 \% & 97.5 \%\tabularnewline
 \midrule
 \endhead
-65 & 0.6519376 & 0.5481793 & 0.7430377\tabularnewline
-85 & 0.4087936 & 0.3415559 & 0.4796259\tabularnewline
+65 & 0.6562405 & 0.5594328 & 0.7416016\tabularnewline
+85 & 0.4063420 & 0.3406072 & 0.4756125\tabularnewline
 \bottomrule
 \end{longtable}
 
@@ -192,13 +183,12 @@ correctly classified as successes (true positive). Specificity is the
 proportion of the true failures that have been correctly classified as
 failures (true negatives).
 
-Sensitivity was 55\%
+Sensitivity was 55.5\%
 
-Specificity was 58.2\%
+Specificity was 57.3\%
 
-\hypertarget{predicting-crime-rate-based-on-region}{%
 \subsection{Predicting crime rate based on
-region}\label{predicting-crime-rate-based-on-region}}
+region}\label{predicting-crime-rate-based-on-region}
 
 Make a cross-tabulation between region and hicrm. Choose as reference
 region in your regression models the one that has the largest number of
@@ -308,55 +298,70 @@ Covariate & Sensitivity & Specificity\tabularnewline
 Covariate & Sensitivity & Specificity\tabularnewline
 \midrule
 \endhead
-Higrads & 0.55 & 0.58\tabularnewline
+Higrads & 0.55 & 0.57\tabularnewline
 Region & 0.70 & 0.66\tabularnewline
 \bottomrule
 \end{longtable}
 
 Would prefer region
 
-\hypertarget{predicting-crime-rate-based-on-region-and-higrads}{%
 \subsection{Predicting crime rate based on region and
-higrads}\label{predicting-crime-rate-based-on-region-and-higrads}}
+higrads}\label{predicting-crime-rate-based-on-region-and-higrads}
 
 Fit a third model using both higrads and region. For all three models,
 report their AIC, BIC, Nagelkerke pseudo R\^{}2, sensitivity and
 specificity. Which model is best?
 
 \begin{verbatim}
+#> [[1]]
 #> 
-#> Call:
-#> glm(formula = hicrm ~ higrads + region, family = "binomial", 
-#>     data = cdi)
-#> 
-#> Deviance Residuals: 
-#>      Min        1Q    Median        3Q       Max  
-#> -1.96960  -0.99815  -0.04339   0.94402   1.94819  
+#> Call:  glm(formula = hicrm ~ higrads, family = "binomial", data = cdi)
 #> 
 #> Coefficients:
-#>               Estimate Std. Error z value Pr(>|z|)    
-#> (Intercept)    2.28073    1.28438   1.776 0.075774 .  
-#> higrads       -0.04725    0.01645  -2.873 0.004069 ** 
-#> regionMidwest  1.08760    0.31806   3.420 0.000627 ***
-#> regionSouth    2.19684    0.30551   7.191 6.45e-13 ***
-#> regionWest     1.95120    0.34749   5.615 1.96e-08 ***
-#> ---
-#> Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+#> (Intercept)      higrads  
+#>     3.98009     -0.05128  
 #> 
-#> (Dispersion parameter for binomial family taken to be 1)
+#> Degrees of Freedom: 439 Total (i.e. Null);  438 Residual
+#> Null Deviance:       610 
+#> Residual Deviance: 596.7     AIC: 600.7
 #> 
-#>     Null deviance: 609.97  on 439  degrees of freedom
-#> Residual deviance: 527.32  on 435  degrees of freedom
-#> AIC: 537.32
+#> [[2]]
 #> 
-#> Number of Fisher Scoring iterations: 4
+#> Call:  glm(formula = hicrm ~ region, family = "binomial", data = cdi)
+#> 
+#> Coefficients:
+#>   (Intercept)  regionMidwest    regionSouth     regionWest  
+#>       -1.3622         0.9875         2.2601         1.8111  
+#> 
+#> Degrees of Freedom: 439 Total (i.e. Null);  436 Residual
+#> Null Deviance:       610 
+#> Residual Deviance: 536   AIC: 544
+#> 
+#> [[3]]
+#> 
+#> Call:  glm(formula = hicrm ~ higrads + region, family = "binomial", 
+#>     data = cdi)
+#> 
+#> Coefficients:
+#>   (Intercept)        higrads  regionMidwest    regionSouth     regionWest  
+#>       2.28073       -0.04725        1.08760        2.19684        1.95120  
+#> 
+#> Degrees of Freedom: 439 Total (i.e. Null);  435 Residual
+#> Null Deviance:       610 
+#> Residual Deviance: 527.3     AIC: 537.3
+#>     model      aic      bic sensitivity specificity  PseudoR2
+#> 1 Higrads 600.6780 608.8516   0.5545455   0.5727273 0.0396750
+#> 2  Region 544.0479 560.3950   0.7045455   0.6636364 0.2061991
+#> 3    Both 537.3152 557.7490   0.7045455   0.6727273 0.2283489
 \end{verbatim}
 
-\hypertarget{comparing-models}{%
-\subsubsection{Comparing models}\label{comparing-models}}
+\subsubsection{Comparing models}\label{comparing-models}
 
-\hypertarget{plot-skit}{%
-\subsubsection{Plot \& skit}\label{plot-skit}}
+\begin{figure}[h]
+\includegraphics{Project_2_files/figure-latex/unnamed-chunk-2-1} \caption{Bla bla}\label{fig:unnamed-chunk-2}
+\end{figure}
+
+\subsubsection{Plot \& skit}\label{plot-skit}
 
 Use the third model and plot the squared standardized Pearson residuals
 and the standardized deviance residuals against the linear predictor
@@ -364,8 +369,21 @@ x\^{}beta. Is there anything alarming here? Plot Cook's distance against
 the linear predictor, as well as against higrads and against region. Any
 interesting finds?
 
-\hypertarget{interaction}{%
-\subsubsection{Interaction}\label{interaction}}
+\begin{verbatim}
+#> [1] 82.65435
+#> [1] 4
+#> Analysis of Deviance Table
+#> 
+#> Model 1: hicrm ~ 1
+#> Model 2: hicrm ~ higrads + region
+#>   Resid. Df Resid. Dev Df Deviance
+#> 1       439     609.97            
+#> 2       435     527.32  4   82.654
+#> [1] 9.487729
+#> [1] 4.769308e-17
+\end{verbatim}
+
+\subsubsection{Interaction}\label{interaction}
 
 One might suspect that the effect of higrads is different in different
 regions. Fit at fourth model adding the interaction higrads * region to
@@ -374,8 +392,7 @@ whether this is significantly better. Also calculate AIC, BIC,
 Nagelkerke, sensitivity and specificity and plot the residuals and
 Cook's distance. Do the interaction terms improve the model?
 
-\hypertarget{other-variables}{%
-\section{Other variables}\label{other-variables}}
+\section{Other variables}\label{other-variables}
 
 Find a better model using combinations of the variables higrads, region,
 poors and phys1000 = 1000*phys/popul (see Lab 3). You may ignore
