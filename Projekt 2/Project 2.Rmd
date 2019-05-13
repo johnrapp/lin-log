@@ -41,8 +41,10 @@ library(pscl)
 
 cdi <- read.delim("CDI.txt")
  
+region.names <- c("Northeast", "Midwest", "South", "West")
 cdi$region <- factor(cdi$region, levels = c(1, 2, 3, 4),
-                     labels = c("Northeast", "Midwest", "South", "West"))
+                     labels = region.names)
+  
 cdi$crm1000 <- 1000 * cdi$crimes / cdi$popul
 cdi$crm1000 <- 1000 * cdi$crimes / cdi$popul
 cdi$phys1000 = 1000 * cdi$phys / cdi$popul
@@ -243,7 +245,6 @@ of having a high crime rate.
 cdi$region <- relevel(cdi$region, ref = reference.level)
 
 model.region <- glm(hicrm ~ region, data = cdi, family = "binomial")
-sum <- summary(model.region)
 
 coeff.beta <- model.region$coefficients
 
@@ -271,7 +272,8 @@ beta.region <- exp(coeff.beta)
 
 table.beta.ci <- cbind("OR" = exp(coeff.beta), exp(ci.beta))
 table.beta.ci <- table.beta.ci[-c(1), ]
-row.names(table.beta.ci) <- c("South", "Midwest", "West")
+
+row.names(table.beta.ci) <- region.names[region.names != reference.level]
 
 kable(table.beta.ci, caption = "Test", digits = 1)
 
@@ -290,9 +292,7 @@ as covariate, which one should we choose?
 
 pred.counties <- subset(cdi, select = c(county, region, hicrm))
 
-regions <- c("Northeast", "Midwest", "South", "West")
-
-x0 <- data.frame(region = regions)
+x0 <- data.frame(region = region.names)
 
 pred <- predict(model.region, x0, se.fit = TRUE, type = "response")
 
@@ -447,8 +447,7 @@ with(compare.models, {
 ```
 
 ### Plot & skit
-Use the third model and plot the squared standardized Pearson residuals and the standardized deviance residuals against the linear predictor x^beta. Is
-there anything alarming here? Plot Cook’s distance against the linear predictor, as well as against higrads
+Use the third model and plot the squared standardized Pearson residuals and the standardized deviance residuals against the linear predictor x^beta. Is there anything alarming here? Plot Cook’s distance against the linear predictor, as well as against higrads
 and against region. Any interesting finds?
 
 ```{r}
