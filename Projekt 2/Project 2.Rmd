@@ -355,7 +355,7 @@ ci.prob <- cbind("2.5 %" = pred$fit - standard.error * pred$se.fit,
 
 
 table.prob.ci <- cbind("Estimate" = pred$fit * 100, ci.prob * 100)
-row.names(table.prob.ci) <- regions
+row.names(table.prob.ci) <- region.names
 
 kable(table.prob.ci, caption = "Test", digits = 1)
 
@@ -415,13 +415,17 @@ calc.metrics = function(model) {
   
   return (metrics)
 }
+calc.metrics.models = function(models, model.names) {
+  models.metrics <- lapply(models, calc.metrics)
 
-models.metrics <- lapply(models, calc.metrics)
+  compare.models <- do.call(rbind, models.metrics)
+  compare.models <- cbind(model.name = model.names, compare.models)
+  rownames(compare.models) <- NULL
+  
+  return (compare.models)  
+}
 
-compare.models <- do.call(rbind, models.metrics)
-compare.models <- cbind(name = model.names, compare.models)
-rownames(compare.models) <- model.names
-
+compare.models <- calc.metrics.models(models, model.names)
 compare.models
 ```
 
@@ -438,7 +442,7 @@ with(compare.models, {
   plot(x, rep(0, n), type = "n", ylim = c(500, 650), xaxt = "n",
        ylab = "AIC/BIC", xlab = "Model",
        main = "Model comparison")
-  axis(1, at = x, labels = model)
+  axis(1, at = x, labels = model.name)
   lines(x, aic, col = "red", lty = 2, lwd = 2)
   lines(x, bic, col = "red", lty = 1, lwd = 2)
   
@@ -554,53 +558,26 @@ model.3 <- glm(hicrm ~ higrads + region + poors, data = cdi, family = "binomial"
 model.4 <- glm(hicrm ~ higrads + region + poors + phys1000, data = cdi, family = "binomial")
 
 
-model.names1 <- c("H", "H + R", "H + R + Poors", "H + R + Poors + Phys1000")
-models1 <- list(model.1, model.2, model.3, model.4)
+model.names <- c("H", "H + R", "H + R + Poors", "H + R + Poors + Phys1000")
+models <- list(model.1, model.2, model.3, model.4)
 
-models1
 
-aic1 <- do.call(AIC, models1)
-#calc.aic <- AIC(models)
 
-calc.aic1 <- do.call(AIC, models1)$AIC
-calc.bic1 <- do.call(AIC, c(models1, list(k = log(nrow(cdi)))))$AIC
-     
+compare.models <- calc.metrics.models(models, model.names)
 
-metrics1 <- sapply(models1, calc.metrics)
-
-#Pseudo R2
-#R2.col <- t(cbind(pR2(model.higrads)[6], pR2(model.region)[6], pR2(model.both)[6]))
-#colnames(R2.col)[colnames(R2.col)=="r2CU"] <- "Pseudo R2"
-
-pseudo.R21 <- sapply(models1, pR2)["r2CU",]
-
-compare.models1 <- data.frame(
-  model = model.names1,
-  aic = calc.aic1,
-  bic = calc.bic1,
-  sensitivity = unlist(metrics1["sensitivity",]),
-  specificity = unlist(metrics1["specificity",]),
-  PseudoR2 = pseudo.R21
-)
-
-compare.models1
+compare.models
 
  
 ```
 
 ```{r}
 
-topmodel <- glm(hicrm ~ region + poors + phys1000, data = cdi, family = "binomial")
+top.model <- glm(hicrm ~ region + poors + phys1000, data = cdi, family = "binomial")
 
-aicTop <- AIC(topmodel)
-bicTop <- AIC(topmodel, k = log(nrow(cdi)))
-sensitivityTop <- calc.metrics(topmodel)[1]
-specificityTop <- calc.metrics(topmodel)[2]
-R2pseudoTop <- pR2(topmodel)[6]
- interaction.data1 <- cbind("aic" = aicTop, "bic" = bicTop, "sensitivity" = sensitivityTop, "spedificity" = specificityTop, "Pseudo R2" = R2pseudoTop)
+metrics <- calc.metrics(top.model)
+rownames(metrics) <- c("Best")
 
- interaction.data1
- rownames(interaction.data1) <- c("Best")
+metrics
 
 ```
 
