@@ -40,9 +40,13 @@ library(purrr)
 library(pscl)
 
 cdi <- read.delim("CDI.txt")
+ 
 cdi$region <- factor(cdi$region, levels = c(1, 2, 3, 4),
                      labels = c("Northeast", "Midwest", "South", "West"))
 cdi$crm1000 <- 1000 * cdi$crimes / cdi$popul
+cdi$crm1000 <- 1000 * cdi$crimes / cdi$popul
+cdi$phys1000 = 1000 * cdi$phys / cdi$popul
+
 
 median = summary(cdi$crm1000)["Median"]
 
@@ -507,3 +511,4 @@ the residuals and Cook’s distance. Do the interaction terms improve the model?
 Find a better model using combinations of the variables higrads, region, poors and
 phys1000 = 1000*phys/popul (see Lab 3). You may ignore interactions. Motivate why your model
 is better.
+
