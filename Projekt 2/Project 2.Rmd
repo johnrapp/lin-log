@@ -18,8 +18,6 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
-
-knitr::read_chunk('lib.R')
 ```
 
 ```{r setup_pdf, eval = FALSE}
@@ -353,11 +351,11 @@ Fit a third model using both higrads and region. For all three models, report th
 pseudo R^2, sensitivity and specificity. Which model is best?
 
 ```{r}
-model.region.higrads <- glm(hicrm ~ higrads + region, data = cdi, family = "binomial")
+model.both <- glm(hicrm ~ higrads + region, data = cdi, family = "binomial")
 
 
 model.names <- c("Higrads", "Region", "Both")
-models <- list(model.higrads, model.region, model.region.higrads)
+models <- list(model.higrads, model.region, model.both)
 
 models
 
@@ -396,8 +394,10 @@ calc.metrics = function(model) {
 metrics <- sapply(models, calc.metrics)
 
 #Pseudo R2
-R2.col <- t(cbind(pR2(model.higrads)[6], pR2(model.region)[6], pR2(model.region.higrads)[6]))
-colnames(R2.col)[colnames(R2.col)=="r2CU"] <- "Pseudo R2"
+#R2.col <- t(cbind(pR2(model.higrads)[6], pR2(model.region)[6], pR2(model.both)[6]))
+#colnames(R2.col)[colnames(R2.col)=="r2CU"] <- "Pseudo R2"
+
+pseudo.R2 <- sapply(models, pR2)["r2CU",]
 
 compare.models <- data.frame(
   model = model.names,
@@ -405,7 +405,7 @@ compare.models <- data.frame(
   bic = calc.bic,
   sensitivity = unlist(metrics["sensitivity",]),
   specificity = unlist(metrics["specificity",]),
-  PseudoR2 = R2.col
+  PseudoR2 = pseudo.R2
 )
 
 compare.models
@@ -414,46 +414,32 @@ compare.models
 
 
 ### Comparing models
-```{r}
+```{r, fig.width = 8, fig.height = 5, fig.cap = "Bla bla", fig.pos = "h", out.extra = ''}
 
-# ### a "logical" plot-order:
-# ordning <- c(1, 2, 3, 4, 5, 8, 7, 6, 9, 10, 11, 12)
-# samlat[ordning, ]
-# 
-# ### create the plots on page 15 and 16:
-# antal <- nrow(samlat)
-# x <- 1:antal
-# with(samlat[ordning,], {
-#   plot(x, rep(0, antal), type = "n", ylim = c(0, 1), xaxt = "n",
-#        ylab = "R2/R2-adjusted", xlab = "model",
-#        main = "Coefficient of determination")
-#   axis(1, at = x, labels = modname)
-#   lines(x, r2, col = "red", lty = 2, lwd = 2)
-#   lines(x, r2adj, col = "blue", lty = 1, lwd = 2)
-#   points(x[sig], r2adj[sig], col = "blue", pch = 16)
-#   points(x[sig], r2[sig], col = "red", pch = 16)
-# })
-# legend(1, 1, c("R2", "R2-adj", "all sign."),
-#        col = c("red", "blue", "black"),
-#        lty = c(2, 1, 0), pch = c(NA, NA, 16), lwd = c(2, 2, 0))
-# 
-# ## check that AIC and BIC fit withing the min-max-limits:
-# summary(samlat)
-# with(samlat[ordning,], {
-#   plot(x, rep(0, antal), type = "n", ylim = c(75, 95), xaxt = "n",
-#        ylab = "AIC and BIC", xlab = "model",
-#        main = "Information criteria")
-#   axis(1, at = x, labels = modname)
-#   lines(x, aic, col = "red", lty = 2, lwd = 2)
-#   lines(x, bic, col = "blue", lty = 1, lwd = 2)
-#   points(x[sig], aic[sig], col = "red", pch = 16)
-#   points(x[sig], bic[sig], col = "blue", pch = 16)
-# })
-# legend(9, 95, c("AIC", "BIC", "all sign."),
-#        col = c("red", "blue", "black"),
-#        lty = c(2, 1, 0), pch = c(NA, NA, 16), lwd = c(2, 2, 0))
-
-
+n <- nrow(compare.models)
+x <- 1:n
+with(compare.models, {
+  par(mar = c(5, 4, 4, 4) + 0.3)  # Leave space for second axis
+  
+  plot(x, rep(0, n), type = "n", ylim = c(500, 650), xaxt = "n",
+       ylab = "AIC/BIC", xlab = "Model",
+       main = "Model comparison")
+  axis(1, at = x, labels = model)
+  lines(x, aic, col = "red", lty = 2, lwd = 2)
+  lines(x, bic, col = "red", lty = 1, lwd = 2)
+  
+  par(new = TRUE)
+  plot(x, rep(0, n), type = "n", axes = FALSE, ylim = c(0, 1), xaxt = "n",
+     xlab = "", ylab = "")
+  lines(x, PseudoR2, col = "blue", lty = 1, lwd = 2)
+  best.model <- 3
+  axis(side=4, at = pretty(c(0, 1)))
+  mtext("Pseudo R2", side=4, line=3)
+  
+  legend("topright",legend=c("BIC", "AIC","Pseudo R2"),
+    text.col=c("red","red", "blue"), lty=c(1, 2, 1),col=c("red","red", "blue"))
+  
+})
 ```
 
 ### Plot & skit
@@ -463,13 +449,13 @@ and against region. Any interesting finds?
 
 ```{r}
 
-xb <- predict(model.region.higrads)
+xb <- predict(model.both)
 
 
-cdi$v <- influence(model.region.higrads)$hat
+cdi$v <- influence(model.both)$hat
 
 #Pearson Standardized residuals
-cdi$r <- influence(model.region.higrads)$pear.res / sqrt(1 - influence(model.region.higrads)$hat)
+cdi$r <- influence(model.both)$pear.res / sqrt(1 - influence(model.both)$hat)
 summary(cdi$r)
 
 qqnorm(cdi$r)
@@ -482,7 +468,7 @@ abline(h = c(0, 2^2), col = "red", lty = 3)
 
 
 #Squares standardized pearson residuals 
-cdi$ds <- influence(model.region.higrads)$dev.res / sqrt(1 - influence(model.region.higrads)$hat)
+cdi$ds <- influence(model.both)$dev.res / sqrt(1 - influence(model.both)$hat)
 summary(cdi$ds)
 with(cdi, plot(ds ~ xb, 
                   ylab = "standardized deviance residuals"))
@@ -495,7 +481,7 @@ abline(h = c(-2, 0, 2), col = "red", lty = 3)
 
 
 #Cook's
-cdi$cook <- cooks.distance(model.region.higrads)
+cdi$cook <- cooks.distance(model.both)
 summary(cdi$cook)
 with(cdi, plot(cook ~ xb, main = "Cook's distance"))
 abline(h = c(1, 4 / n), col = "red", lty = 3)
@@ -505,8 +491,6 @@ abline(h = c(1, 4 / n), col = "red", lty = 3)
 
 with(cdi, plot(cook ~ higrads, main = "Cook's distance"))
 abline(h = c(1, 4 / n), col = "red", lty = 3)
-
-
 
 
 ```
