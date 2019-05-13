@@ -1,15 +1,18 @@
 ---
 title: "Project 2"
-author: "Axel Sjöberg & John Rapp Farnes"
+author: "Axel SjÃ¶berg & John Rapp Farnes"
 date: "8 maj 2019"
 output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
   pdf_document:
-    fig_caption: true
-    number_sections: true
-    toc: true
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
     toc_depth: 3
-classoption:
-  a4paper
+classoption: a4paper
 ---
 
 ```{r setup_knitr, include = FALSE}
@@ -149,6 +152,9 @@ decrease.ten.percent <- 1 - beta.higrads^10
 display.percent <- function(value) {
   return(round(value * 100, digits=1))
 }
+
+decrease.one.percent
+decrease.ten.percent
 ```
 
 If higrads increases 1%, odd decreases by `r display.percent(decrease.one.percent)`%
@@ -165,7 +171,6 @@ x0 <- data.frame(higrads = c(65, 85))
 
 predx <- cbind(x0, prob = predict(model.higrads, x0, type = "response"))
 
-standard.error <- 1.96
 xb <- predict(model.higrads, x0, se.fit = TRUE)
 ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
                     upr = xb$fit + standard.error * xb$se.fit)
@@ -187,23 +192,36 @@ Specificity is the proportion of the true failures that have been correctly clas
 
 ```{r pred_sense_spec, include = F}
 
-pred.counties <- subset(cdi, select = c(county, higrads, hicrm))
+calc.sense.spec = function(model) {
+  pred.counties <- cdi
 
-pred.counties <- cbind(pred.counties, prob.hicrm = predict(model.higrads, pred.counties, type = "response"))
-pred.counties <- cbind(pred.counties, pred.hicrm = ifelse(pred.counties$prob.hicrm > 0.5, 1, 0))
+  pred.counties <- cbind(pred.counties, prob.hicrm = predict(model, pred.counties, type = "response"))
+  pred.counties <- cbind(pred.counties, pred.hicrm = ifelse(pred.counties$prob.hicrm > 0.5, 1, 0))
+  
+  num.hicrm <- sum(pred.counties$hicrm)
+  
+  # Sensitivity
+  true.postive <- with(pred.counties, ifelse(pred.hicrm == 1 & hicrm == 1, 1, 0))
+  sensitivity <- sum(true.postive) / num.hicrm
+  sensitivity
+  
+  # Specificity
+  true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
+  specificity <- sum(true.negative) / num.hicrm
+  specificity
+  
+  metrics <- data.frame(
+    sensitivity,
+    specificity
+  )
+  
+  return(metrics)
+}
 
-pred.counties
+sense.spec.higrads <- calc.sense.spec(model.higrads)
 
-num.hicrm <- sum(pred.counties$hicrm)
-
-# Sensitivity
-true.postive <- with(pred.counties, ifelse(pred.hicrm == 1 & hicrm == 1, 1, 0))
-sensitivity.higrads <- sum(true.postive) / num.hicrm
-sensitivity.higrads
-
-true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
-specificity.higrads <- sum(true.negative) / num.hicrm
-specificity.higrads
+sensitivity.higrads <- sense.spec.higrads$sensitivity
+specificity.higrads <- sense.spec.higrads$specificity
 
 ```
 
@@ -224,7 +242,7 @@ cross.table <- table(cdi %>% select(region, hicrm))
 
 kable(cross.table, col.names = c("Low crime", "High crime"), caption = "Test")
 
-reference.level <- "Northeast"
+reference.level <- "South"
 
 #prop.table(cross.table)
 #prop.table(cross.table, 1)
@@ -311,24 +329,10 @@ kable(table.prob.ci, caption = "Test", digits = 1)
 ```
 
 ```{r pred_sense_spec3, include = F}
+sense.spec.region <- calc.sense.spec(model.region)
 
-pred.counties <- subset(cdi, select = c(county, region, hicrm))
-
-pred.counties <- cbind(pred.counties, prob.hicrm = predict(model.region, pred.counties, type = "response"))
-pred.counties <- cbind(pred.counties, pred.hicrm = ifelse(pred.counties$prob.hicrm > 0.5, 1, 0))
-
-pred.counties
-
-num.hicrm <- sum(pred.counties$hicrm)
-
-# Sensitivity
-true.postive <- with(pred.counties, ifelse(pred.hicrm == 1 & hicrm == 1, 1, 0))
-sensitivity.region <- sum(true.postive) / num.hicrm
-sensitivity.region
-
-true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
-specificity.region <- sum(true.negative) / num.hicrm
-specificity.region
+sensitivity.region <- sense.spec.region$sensitivity
+specificity.region <- sense.spec.region$specificity
 
 ```
 
@@ -354,63 +358,35 @@ Would prefer region
 Fit a third model using both higrads and region. For all three models, report their AIC, BIC, Nagelkerke
 pseudo R^2, sensitivity and specificity. Which model is best?
 
-```{r}
+```{r, include=F}
 model.both <- glm(hicrm ~ higrads + region, data = cdi, family = "binomial")
-
 
 model.names <- c("Higrads", "Region", "Both")
 models <- list(model.higrads, model.region, model.both)
 
-models
-
-aic <- do.call(AIC, models)
-#calc.aic <- AIC(models)
-
-calc.aic <- do.call(AIC, models)$AIC
-calc.bic <- do.call(AIC, c(models, list(k = log(nrow(cdi)))))$AIC
-     
 calc.metrics = function(model) {
-  pred.counties <- cdi
-
-  pred.counties <- cbind(pred.counties, prob.hicrm = predict(model, pred.counties, type = "response"))
-  pred.counties <- cbind(pred.counties, pred.hicrm = ifelse(pred.counties$prob.hicrm > 0.5, 1, 0))
+  calc.aic <- AIC(model)
+  calc.bic <- AIC(model, k = log(nrow(cdi)))
+  sense.spec <- calc.sense.spec(model)
   
-  num.hicrm <- sum(pred.counties$hicrm)
-  
-  # Sensitivity
-  true.postive <- with(pred.counties, ifelse(pred.hicrm == 1 & hicrm == 1, 1, 0))
-  sensitivity <- sum(true.postive) / num.hicrm
-  sensitivity
-  
-  # Specificity
-  true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
-  specificity <- sum(true.negative) / num.hicrm
-  specificity
+  pseudo.R2 <- pR2(model)["r2CU"]
   
   metrics <- data.frame(
-    sensitivity,
-    specificity
+    aic = calc.aic,
+    bic = calc.bic,
+    sensitivity = sense.spec$sensitivity,
+    specificity = sense.spec$specificity,
+    PseudoR2 = pseudo.R2
   )
   
-  return(metrics)
+  return (metrics)
 }
 
-metrics <- sapply(models, calc.metrics)
+models.metrics <- lapply(models, calc.metrics)
 
-#Pseudo R2
-#R2.col <- t(cbind(pR2(model.higrads)[6], pR2(model.region)[6], pR2(model.both)[6]))
-#colnames(R2.col)[colnames(R2.col)=="r2CU"] <- "Pseudo R2"
-
-pseudo.R2 <- sapply(models, pR2)["r2CU",]
-
-compare.models <- data.frame(
-  model = model.names,
-  aic = calc.aic,
-  bic = calc.bic,
-  sensitivity = unlist(metrics["sensitivity",]),
-  specificity = unlist(metrics["specificity",]),
-  PseudoR2 = pseudo.R2
-)
+compare.models <- do.call(rbind, models.metrics)
+compare.models <- cbind(name = model.names, compare.models)
+rownames(compare.models) <- model.names
 
 compare.models
 ```
@@ -509,7 +485,7 @@ the residuals and Cook’s distance. Do the interaction terms improve the model?
 ```{r}
 model.interaction <- glm(hicrm ~ higrads*region, data = cdi, family = "binomial")
 
-anova(model.region.higrads, model.interaction)
+anova(model.both, model.interaction)
 
 (Ddiff <- model.interaction$null.deviance - model.interaction$deviance)
 # P-value for the test:
@@ -575,7 +551,10 @@ compare.models1 <- data.frame(
 
 compare.models1
 
+ 
+```
 
+```{r}
 
 topmodel <- glm(hicrm ~ region + poors + phys1000, data = cdi, family = "binomial")
 
@@ -586,9 +565,9 @@ specificityTop <- calc.metrics(topmodel)[2]
 R2pseudoTop <- pR2(topmodel)[6]
  interaction.data1 <- cbind("aic" = aicTop, "bic" = bicTop, "sensitivity" = sensitivityTop, "spedificity" = specificityTop, "Pseudo R2" = R2pseudoTop)
 
- 
+ interaction.data1
+ rownames(interaction.data1) <- c("Best")
 
 ```
-
 
 
