@@ -1,7 +1,7 @@
 ---
 title: "Project 2"
-author: "Axel SjÃ¶berg & John Rapp Farnes"
-date: "8 maj 2019"
+author: "Axel Sjöberg & John Rapp Farnes"
+date: "14 maj 2019"
 output:
   html_document:
     df_print: paged
@@ -130,8 +130,12 @@ ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
 # transform to CI for the odds:
 ci.odds <- exp(ci.xb)
 
+to.prob = function(odds) {
+  return (odds / (1 + odds))
+}
+
 # and finally CI for the probabilities and add to the plot:
-predx <- cbind(predx, ci.odds / (1 + ci.odds))
+predx <- cbind(predx, to.prob(ci.odds))
 with(predx, {
   lines(higrads, lwr, lty = 2, col = "red")
   lines(higrads, upr, lty = 2, col = "red")
@@ -151,10 +155,6 @@ Report the beta-estimates together with their confidence intervals and test whet
 
 
 ```{r beta_confidence}
-to.prob = function(odds) {
-  return (odds / (1 + odds))
-}
-
 coeff.beta <- model.higrads$coefficients
 
 ci.beta <- suppressMessages(confint(model.higrads))
@@ -262,51 +262,57 @@ Sensitivity was `r display.percent(sensitivity.higrads)`%
 
 Specificity was `r display.percent(specificity.higrads)`%
 
-## Predicting crime rate based on region
 
-Make a cross-tabulation between region and hicrm. Choose as reference region in your regression models
-the one that has the largest number of counties in it’s smallest low/high category. As a tie-breaker, use the
-other low/high category. Why is this a good idea? Hint: look at how the standard errors for the log odds
-(ratios) are calculated in this situation.
+## Region model
+
+#Introduction
+
+Next, we try a model where we try to predict crime rate based on region. Since region is not a continous variable, but a categorial variable, it is modelled using "dummy variables" $X_i$. In order to implement this effectively, one of the categories is chosen as a reference variable, and the effects of other categories are measured in comparison to it.
+
+In order to determine this reference variable - a cross-tabulation of the data between `region` and `hirm` is studied, see table \ref{tab:cross-tabulation}.
 
 ```{r cross_tabulation}
 
 cross.table <- table(cdi %>% select(region, hicrm))
 
-kable(cross.table, col.names = c("Low crime", "High crime"), caption = "Test")
+kable(cross.table, col.names = c("Low crime", "High crime"), caption = "Test", label = "cross-tabulation")
 
 reference.level <- "South"
-
-#prop.table(cross.table)
-#prop.table(cross.table, 1)
-#prop.table(cross.table, 2)
+cdi$region <- relevel(cdi$region, ref = reference.level)
 
 ```
 
-Set the reference level to `r reference.level`, makes sense to get low SE
+As a reference region, the one that has the largest number of counties in it’s smallest low/high category was chosen. As a tie-breaker, the other low/high category was used. This approach produces the lowest standard error, and therefore highest significance.
+
+As seen in table \ref{tab:cross-tabulation}, `r reference.level` was chosen according to those contstraints.
 
 
+Using this reference region, the model looks like
+\begin{equation}
+  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \beta_{Northeast} \cdot X_{Northeast,i} + \beta_{Midwest} \cdot X_{Midwest,i} + \beta_{West} \cdot X_{West,i} + \epsilon_i
+\end{equation}
 
-Fit a logistic regression using region as (categorical) covariate and report the beta-estimates together with their
-confidence intervals. Test whether there are any significant differences between the regions in the probability
-of having a high crime rate.
+Where $epsilon \sim N(0, \sigma)$ i.i.d.
+
+Where then the \beta coefficients are measured relative to `r reference.level`, and \beta_0 is coefficient for `r reference.level`.
+
+
+#Results
+Next, a logistic regression model is fit with the given data set, in order to study significance. In table \ref{tab:region_beta}, the significance of the \beta coefficients are studied
 
 ```{r region_beta}
-# Set reference
-cdi$region <- relevel(cdi$region, ref = reference.level)
-
 model.region <- glm(hicrm ~ region, data = cdi, family = "binomial")
 
 coeff.beta <- model.region$coefficients
 
 ci.beta <- suppressMessages(confint(model.region))
 
-beta.p <- sum$coefficients[, "Pr(>|z|)"] * 100
+beta.p <- sum$coefficients[, "Pr(>|z|)"]
 
-table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta, "P-value (%)" = beta.p)
+table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta, "P-value" = beta.p)
 row.names(table.beta.ci) <- c("$\\beta_0$", "$\\beta_1$", "$\\beta_2$", "$\\beta_3$")
 
-kable(table.beta.ci, caption = "Test", digits = 3)
+kable(table.beta.ci, caption = "Test", digits = c(3,3,3,4))
 
 ```
 
