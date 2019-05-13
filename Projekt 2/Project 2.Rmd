@@ -39,6 +39,7 @@ library(knitr)
 library(dplyr)
 library(rlist)
 library(purrr)
+library(pscl)
 
 cdi <- read.delim("CDI.txt")
 cdi$region <- factor(cdi$region, levels = c(1, 2, 3, 4),
@@ -394,34 +395,20 @@ calc.metrics = function(model) {
 
 metrics <- sapply(models, calc.metrics)
 
+#Pseudo R2
+R2.col <- t(cbind(pR2(model.higrads)[6], pR2(model.region)[6], pR2(model.region.higrads)[6]))
+colnames(R2.col)[colnames(R2.col)=="r2CU"] <- "Pseudo R2"
+
 compare.models <- data.frame(
   model = model.names,
   aic = calc.aic,
   bic = calc.bic,
   sensitivity = unlist(metrics["sensitivity",]),
-  specificity = unlist(metrics["specificity",])
+  specificity = unlist(metrics["specificity",]),
+  PseudoR2 = R2.col
 )
 
-# models %>% map(function(model) model$coefficients)
-
 compare.models
-
-# # Pseudo R2
-# # Likelihood = exp(-deviance/2)
-# L0 <- exp(-model.0$deviance/2)
-# R2max <- 1 - L0^(2/n)
-# L <- exp(-c(model.0$deviance, model.banana$deviance, model.apple$deviance,
-#             model.melon$deviance, model$deviance)/2)
-# R2CS <- 1 - (L0/L)^(2/n)
-# R2N <- R2CS/R2max
-# 
-# R2 <- round(100*cbind(R2CS, R2N), 2)
-# row.names(R2) <- c("model.0", "model.banana", "model.apple", "model.melon",
-#                    "model.full")
-# R2
-# 100*R2max
-# 
-
 ```
 
 
@@ -473,6 +460,21 @@ compare.models
 Use the third model and plot the squared standardized Pearson residuals and the standardized deviance residuals against the linear predictor x^beta. Is
 there anything alarming here? Plot Cook’s distance against the linear predictor, as well as against higrads
 and against region. Any interesting finds?
+
+```{r}
+
+#Likelihood ratio test:
+(Ddiff <- model.region.higrads$null.deviance - model.region.higrads$deviance)
+(dfdiff <- model.region.higrads$df.null - model.region.higrads$df.residual)
+# .. or using the deviance table
+anova(update(model.region.higrads, . ~ 1), model.region.higrads)
+# chi2-quantile for comparison
+qchisq(1 - 0.05, dfdiff)
+# P-value for the test:
+pchisq(Ddiff, dfdiff, lower.tail = FALSE)
+
+```
+
 
 
 ### Interaction
