@@ -88,7 +88,10 @@ In order to account for size, another varible called crm1000 was added to the da
 
 ### Seeing if there is relationship
 
-We saw if there was a relationship by plotting bla bla with kernel smoother.
+Title: The higrad model
+
+The first model considered had higrads as the sole covariate. In order to determine if there is a relationship between hicrm and higrads they are plotted against each other, see figure XX. Because hicrm is a categorical varible it is very difficult to determine if there is a relationship by the pattern of the plot. In order to circumvent this problem a kernel smoother was added to the plot. The most smooth looking line was attained by setting the bandwidth to 20. The kernel regresion was sort of S-shaped meaning that it has a negative B1. Furthermore the fitted model along with it's 95 % confidence interval was added to the plot. The kernel smoother and fitted model is also found in figure XX.
+
 
 
 ```{r code_plot, fig.width = 8, fig.height = 5, fig.cap = "Bla bla", fig.pos = "h", out.extra = ''}
@@ -125,13 +128,10 @@ with(predx, {
 
 Seems to be relationship!
 
-KOLLA UTAN BÖRJAN
+As can be seen in figure XX, a higher number of higrads seems to make a county less probable to qualify as high crime county. Logically this makes sense. THe B!! values together with their 95 % confidence inteval is presented in table XX. Neither one of the B! confidence interval cover zero meaning that they are statistically significant at a! = 0.05. This is verfied by the very small P value.  
 
 
 ### Confidence intervals and significance
-
-Report the beta-estimates together with their confidence intervals and test whether the amount of adults with
-12 years in school has a significant effect on the probability of having a higher than median crime rate
 
 
 ```{r beta_confidence}
@@ -143,22 +143,19 @@ coeff.beta <- model.higrads$coefficients
 
 ci.beta <- suppressMessages(confint(model.higrads))
 
-beta.p <- sum$coefficients[, "Pr(>|z|)"] * 100
+beta.p <- sum$coefficients[, "Pr(>|z|)"]
 
-table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta, "P-value (%)" = beta.p)
+table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta, "P-value" = beta.p)
 row.names(table.beta.ci) <- c("$\\beta_0$", "$\\beta_1$")
 
-kable(table.beta.ci, caption = "Test", digits = 3)
+kable(table.beta.ci, caption = "Test", digits = c(3,3,3,4))
 
 ```
+Table XX shows the odds ratio of having a high crime rate when the amount of higrads is increased by 1 and 10 % respectively. As can be seen in the table there is a substantial effect on the mentioned odds when the number of higrads is increased by 10 %.
 
 
-Significance!
 
 ### Change in odds
-
-Estimate the relative change in the odds (odds ratio) of having a high crime rate, with confidence interval,
-when the amount of higrads is increased by 1 (percent), and when it is increased by 10 (percent).
 
 ```{r beta_decrease, include = F}
 beta.higrads <- exp(coeff.beta["higrads"])
@@ -174,11 +171,15 @@ display.percent <- function(value) {
 If higrads increases 1%, odd decreases by `r display.percent(decrease.one.percent)`%
 If higrads increases 10%, odd decreases by `r display.percent(decrease.ten.percent)`%
 
+TODO make table of odds ratio!!!!
+
 
 ### Predict
 
-Use the model to predict the probability, with confidence interval, of having a high crime rate in a county
-where the amount of higrads is 65 (percent), and where it is 85 (percent).
+
+Using the higrads model,the probability, with confidence interval, of having a high crime rate in a county
+where the amount of higrads is 65 (percent), and where it is 85 (percent) is predicted. The result can be found in table XX.
+
 ```{r predict}
 x0 <- data.frame(higrads = c(65, 85))
 
@@ -199,7 +200,9 @@ kable(predx, col.names = c("Higrads", "Probability", "2.5 %", "97.5 %"), caption
 ```
 
 Use the model to predict, for each of the counties, whether it would be expected to have a low or a high crime 
-rate (predicted probability below or above 0.5) and calculate the sensitivity and specificity for this model.
+rate (predicted probability below or above 0.5) and calculate the sensitivity and specificity for this model.'
+
+The sensitivity and specificity of the model is shown in table XX. (TODO make the table). As can be seen the higrad model does a rather bad job at correctly clasifying the the crime level status of the counties
 
 Sensitivity is the proportion of the true successes that have been correctly classified as successes (true positive).
 Specificity is the proportion of the true failures that have been correctly classified as failures (true negatives).
