@@ -507,8 +507,44 @@ interaction higrads * region to the third model, and use a Likelihood ratio test
 whether this is significantly better. Also calculate AIC, BIC, Nagelkerke, sensitivity and specificity and plot
 the residuals and Cook’s distance. Do the interaction terms improve the model?
 
+```{r}
+model.interaction <- glm(hicrm ~ higrads*region, data = cdi, family = "binomial")
+
+anova(model.region.higrads, model.interaction)
+
+(Ddiff <- model.interaction$null.deviance - model.interaction$deviance)
+# P-value for the test:
+(dfdiff <- model.interaction$df.null - model.interaction$df.residual)
+
+
+aicInteraction <- AIC(model.interaction)
+bicInteraction <- AIC(model.interaction, k = log(nrow(cdi)))
+sensitivityInteraction <- calc.metrics(model.interaction)[1]
+specificityInteraction <- calc.metrics(model.interaction)[2]
+R2pseudoInteraction <- pR2(model.interaction)[6]
+ interaction.data <- cbind("aic" = aicInteraction, "bic" = bicInteraction, "sensitivity" = sensitivityInteraction, "spedificity" = specificityInteraction, "Pseudo R2" = R2pseudoInteraction)
+
+rownames(interaction.data)[rownames(interaction.data)=="r2CU"] <- "Interaction model"
+
+interaction.data
+
+
+```
+
+
+
 # Other variables
 Find a better model using combinations of the variables higrads, region, poors and
 phys1000 = 1000*phys/popul (see Lab 3). You may ignore interactions. Motivate why your model
 is better.
+
+```{R}
+model.1 <- glm(hicrm ~ higrads*region, data = cdi, family = "binomial")
+
+
+
+
+```
+
+
 
