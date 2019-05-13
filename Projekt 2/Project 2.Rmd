@@ -1,7 +1,7 @@
 ---
 title: "Project 2"
 author: "Axel Sjöberg & John Rapp Farnes"
-date: "8 maj 2019"
+date: "14 maj 2019"
 output:
   html_document:
     df_print: paged
@@ -58,7 +58,23 @@ median = summary(cdi$crm1000)["Median"]
 cdi <- cbind(cdi, hicrm = ifelse(cdi$crm1000 < median, 0, 1))
 ```
 
+
 \newpage
+
+
+Structure:
+Introduction:
+  Uppgiften
+  Dataset
+  Modellen
+  
+Analysis:
+  Higrad model:
+    Introduction
+    Results
+  Region model:
+  Integration model:
+  Determining best model:
 
 # Introduction
 
@@ -117,8 +133,12 @@ ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
 # transform to CI for the odds:
 ci.odds <- exp(ci.xb)
 
+to.prob = function(odds) {
+  return (odds / (1 + odds))
+}
+
 # and finally CI for the probabilities and add to the plot:
-predx <- cbind(predx, ci.odds / (1 + ci.odds))
+predx <- cbind(predx, to.prob(ci.odds))
 with(predx, {
   lines(higrads, lwr, lty = 2, col = "red")
   lines(higrads, upr, lty = 2, col = "red")
@@ -135,10 +155,6 @@ As can be seen in figure XX, a higher number of higrads seems to make a county l
 
 
 ```{r beta_confidence}
-to.prob = function(odds) {
-  return (odds / (1 + odds))
-}
-
 coeff.beta <- model.higrads$coefficients
 
 ci.beta <- suppressMessages(confint(model.higrads))
@@ -166,6 +182,9 @@ decrease.ten.percent <- 1 - beta.higrads^10
 display.percent <- function(value) {
   return(round(value * 100, digits=1))
 }
+
+decrease.one.percent
+decrease.ten.percent
 ```
 
 If higrads increases 1%, odd decreases by `r display.percent(decrease.one.percent)`%
@@ -186,7 +205,6 @@ x0 <- data.frame(higrads = c(65, 85))
 
 predx <- cbind(x0, prob = predict(model.higrads, x0, type = "response"))
 
-standard.error <- 1.96
 xb <- predict(model.higrads, x0, se.fit = TRUE)
 ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
                     upr = xb$fit + standard.error * xb$se.fit)
@@ -210,23 +228,36 @@ Specificity is the proportion of the true failures that have been correctly clas
 
 ```{r pred_sense_spec, include = F}
 
-pred.counties <- subset(cdi, select = c(county, higrads, hicrm))
+calc.sense.spec = function(model) {
+  pred.counties <- cdi
 
-pred.counties <- cbind(pred.counties, prob.hicrm = predict(model.higrads, pred.counties, type = "response"))
-pred.counties <- cbind(pred.counties, pred.hicrm = ifelse(pred.counties$prob.hicrm > 0.5, 1, 0))
+  pred.counties <- cbind(pred.counties, prob.hicrm = predict(model, pred.counties, type = "response"))
+  pred.counties <- cbind(pred.counties, pred.hicrm = ifelse(pred.counties$prob.hicrm > 0.5, 1, 0))
+  
+  num.hicrm <- sum(pred.counties$hicrm)
+  
+  # Sensitivity
+  true.postive <- with(pred.counties, ifelse(pred.hicrm == 1 & hicrm == 1, 1, 0))
+  sensitivity <- sum(true.postive) / num.hicrm
+  sensitivity
+  
+  # Specificity
+  true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
+  specificity <- sum(true.negative) / num.hicrm
+  specificity
+  
+  metrics <- data.frame(
+    sensitivity,
+    specificity
+  )
+  
+  return(metrics)
+}
 
-pred.counties
+sense.spec.higrads <- calc.sense.spec(model.higrads)
 
-num.hicrm <- sum(pred.counties$hicrm)
-
-# Sensitivity
-true.postive <- with(pred.counties, ifelse(pred.hicrm == 1 & hicrm == 1, 1, 0))
-sensitivity.higrads <- sum(true.postive) / num.hicrm
-sensitivity.higrads
-
-true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
-specificity.higrads <- sum(true.negative) / num.hicrm
-specificity.higrads
+sensitivity.higrads <- sense.spec.higrads$sensitivity
+specificity.higrads <- sense.spec.higrads$specificity
 
 ```
 
@@ -234,51 +265,57 @@ Sensitivity was `r display.percent(sensitivity.higrads)`%
 
 Specificity was `r display.percent(specificity.higrads)`%
 
-## Predicting crime rate based on region
 
-Make a cross-tabulation between region and hicrm. Choose as reference region in your regression models
-the one that has the largest number of counties in it’s smallest low/high category. As a tie-breaker, use the
-other low/high category. Why is this a good idea? Hint: look at how the standard errors for the log odds
-(ratios) are calculated in this situation.
+## Region model
+
+#Introduction
+
+Next, we try a model where we try to predict crime rate based on region. Since region is not a continous variable, but a categorial variable, it is modelled using "dummy variables" $X_i$. In order to implement this effectively, one of the categories is chosen as a reference variable, and the effects of other categories are measured in comparison to it.
+
+In order to determine this reference variable - a cross-tabulation of the data between `region` and `hirm` is studied, see table \ref{tab:cross-tabulation}.
 
 ```{r cross_tabulation}
 
 cross.table <- table(cdi %>% select(region, hicrm))
 
-kable(cross.table, col.names = c("Low crime", "High crime"), caption = "Test")
+kable(cross.table, col.names = c("Low crime", "High crime"), caption = "Test", label = "cross-tabulation")
 
-reference.level <- "Northeast"
-
-#prop.table(cross.table)
-#prop.table(cross.table, 1)
-#prop.table(cross.table, 2)
+reference.level <- "South"
+cdi$region <- relevel(cdi$region, ref = reference.level)
 
 ```
 
-Set the reference level to `r reference.level`, makes sense to get low SE
+As a reference region, the one that has the largest number of counties in it’s smallest low/high category was chosen. As a tie-breaker, the other low/high category was used. This approach produces the lowest standard error, and therefore highest significance.
+
+As seen in table \ref{tab:cross-tabulation}, `r reference.level` was chosen according to those contstraints.
 
 
+Using this reference region, the model looks like
+\begin{equation}
+  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \beta_{Northeast} \cdot X_{Northeast,i} + \beta_{Midwest} \cdot X_{Midwest,i} + \beta_{West} \cdot X_{West,i} + \epsilon_i
+\end{equation}
 
-Fit a logistic regression using region as (categorical) covariate and report the beta-estimates together with their
-confidence intervals. Test whether there are any significant differences between the regions in the probability
-of having a high crime rate.
+Where $epsilon \sim N(0, \sigma)$ i.i.d.
+
+Where then the \beta coefficients are measured relative to `r reference.level`, and \beta_0 is coefficient for `r reference.level`.
+
+
+#Results
+Next, a logistic regression model is fit with the given data set, in order to study significance. In table \ref{tab:region_beta}, the significance of the \beta coefficients are studied
 
 ```{r region_beta}
-# Set reference
-cdi$region <- relevel(cdi$region, ref = reference.level)
-
 model.region <- glm(hicrm ~ region, data = cdi, family = "binomial")
 
 coeff.beta <- model.region$coefficients
 
 ci.beta <- suppressMessages(confint(model.region))
 
-beta.p <- sum$coefficients[, "Pr(>|z|)"] * 100
+beta.p <- sum$coefficients[, "Pr(>|z|)"]
 
-table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta, "P-value (%)" = beta.p)
+table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta, "P-value" = beta.p)
 row.names(table.beta.ci) <- c("$\\beta_0$", "$\\beta_1$", "$\\beta_2$", "$\\beta_3$")
 
-kable(table.beta.ci, caption = "Test", digits = 3)
+kable(table.beta.ci, caption = "Test", digits = c(3,3,3,4))
 
 ```
 
@@ -327,7 +364,7 @@ ci.prob <- cbind("2.5 %" = pred$fit - standard.error * pred$se.fit,
 
 
 table.prob.ci <- cbind("Estimate" = pred$fit * 100, ci.prob * 100)
-row.names(table.prob.ci) <- regions
+row.names(table.prob.ci) <- region.names
 
 kable(table.prob.ci, caption = "Test", digits = 1)
 
@@ -335,24 +372,10 @@ kable(table.prob.ci, caption = "Test", digits = 1)
 ```
 
 ```{r pred_sense_spec3, include = F}
+sense.spec.region <- calc.sense.spec(model.region)
 
-pred.counties <- subset(cdi, select = c(county, region, hicrm))
-
-pred.counties <- cbind(pred.counties, prob.hicrm = predict(model.region, pred.counties, type = "response"))
-pred.counties <- cbind(pred.counties, pred.hicrm = ifelse(pred.counties$prob.hicrm > 0.5, 1, 0))
-
-pred.counties
-
-num.hicrm <- sum(pred.counties$hicrm)
-
-# Sensitivity
-true.postive <- with(pred.counties, ifelse(pred.hicrm == 1 & hicrm == 1, 1, 0))
-sensitivity.region <- sum(true.postive) / num.hicrm
-sensitivity.region
-
-true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
-specificity.region <- sum(true.negative) / num.hicrm
-specificity.region
+sensitivity.region <- sense.spec.region$sensitivity
+specificity.region <- sense.spec.region$specificity
 
 ```
 
@@ -378,64 +401,40 @@ Would prefer region
 Fit a third model using both higrads and region. For all three models, report their AIC, BIC, Nagelkerke
 pseudo R^2, sensitivity and specificity. Which model is best?
 
-```{r}
+```{r, include=F}
 model.both <- glm(hicrm ~ higrads + region, data = cdi, family = "binomial")
-
 
 model.names <- c("Higrads", "Region", "Both")
 models <- list(model.higrads, model.region, model.both)
 
-models
-
-aic <- do.call(AIC, models)
-#calc.aic <- AIC(models)
-
-calc.aic <- do.call(AIC, models)$AIC
-calc.bic <- do.call(AIC, c(models, list(k = log(nrow(cdi)))))$AIC
-     
 calc.metrics = function(model) {
-  pred.counties <- cdi
-
-  pred.counties <- cbind(pred.counties, prob.hicrm = predict(model, pred.counties, type = "response"))
-  pred.counties <- cbind(pred.counties, pred.hicrm = ifelse(pred.counties$prob.hicrm > 0.5, 1, 0))
+  calc.aic <- AIC(model)
+  calc.bic <- AIC(model, k = log(nrow(cdi)))
+  sense.spec <- calc.sense.spec(model)
   
-  num.hicrm <- sum(pred.counties$hicrm)
-  
-  # Sensitivity
-  true.postive <- with(pred.counties, ifelse(pred.hicrm == 1 & hicrm == 1, 1, 0))
-  sensitivity <- sum(true.postive) / num.hicrm
-  sensitivity
-  
-  # Specificity
-  true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
-  specificity <- sum(true.negative) / num.hicrm
-  specificity
+  pseudo.R2 <- pR2(model)["r2CU"]
   
   metrics <- data.frame(
-    sensitivity,
-    specificity
+    aic = calc.aic,
+    bic = calc.bic,
+    sensitivity = sense.spec$sensitivity,
+    specificity = sense.spec$specificity,
+    PseudoR2 = pseudo.R2
   )
   
-  return(metrics)
+  return (metrics)
+}
+calc.metrics.models = function(models, model.names) {
+  models.metrics <- lapply(models, calc.metrics)
+
+  compare.models <- do.call(rbind, models.metrics)
+  compare.models <- cbind(model.name = model.names, compare.models)
+  rownames(compare.models) <- NULL
+  
+  return (compare.models)  
 }
 
-metrics <- sapply(models, calc.metrics)
-
-#Pseudo R2
-#R2.col <- t(cbind(pR2(model.higrads)[6], pR2(model.region)[6], pR2(model.both)[6]))
-#colnames(R2.col)[colnames(R2.col)=="r2CU"] <- "Pseudo R2"
-
-pseudo.R2 <- sapply(models, pR2)["r2CU",]
-
-compare.models <- data.frame(
-  model = model.names,
-  aic = calc.aic,
-  bic = calc.bic,
-  sensitivity = unlist(metrics["sensitivity",]),
-  specificity = unlist(metrics["specificity",]),
-  PseudoR2 = pseudo.R2
-)
-
+compare.models <- calc.metrics.models(models, model.names)
 compare.models
 ```
 
@@ -452,7 +451,7 @@ with(compare.models, {
   plot(x, rep(0, n), type = "n", ylim = c(500, 650), xaxt = "n",
        ylab = "AIC/BIC", xlab = "Model",
        main = "Model comparison")
-  axis(1, at = x, labels = model)
+  axis(1, at = x, labels = model.name)
   lines(x, aic, col = "red", lty = 2, lwd = 2)
   lines(x, bic, col = "red", lty = 1, lwd = 2)
   
@@ -533,7 +532,7 @@ the residuals and Cook’s distance. Do the interaction terms improve the model?
 ```{r}
 model.interaction <- glm(hicrm ~ higrads*region, data = cdi, family = "binomial")
 
-anova(model.region.higrads, model.interaction)
+anova(model.both, model.interaction)
 
 (Ddiff <- model.interaction$null.deviance - model.interaction$deviance)
 # P-value for the test:
@@ -568,51 +567,27 @@ model.3 <- glm(hicrm ~ higrads + region + poors, data = cdi, family = "binomial"
 model.4 <- glm(hicrm ~ higrads + region + poors + phys1000, data = cdi, family = "binomial")
 
 
-model.names1 <- c("H", "H + R", "H + R + Poors", "H + R + Poors + Phys1000")
-models1 <- list(model.1, model.2, model.3, model.4)
-
-models1
-
-aic1 <- do.call(AIC, models1)
-#calc.aic <- AIC(models)
-
-calc.aic1 <- do.call(AIC, models1)$AIC
-calc.bic1 <- do.call(AIC, c(models1, list(k = log(nrow(cdi)))))$AIC
-     
-
-metrics1 <- sapply(models1, calc.metrics)
-
-#Pseudo R2
-#R2.col <- t(cbind(pR2(model.higrads)[6], pR2(model.region)[6], pR2(model.both)[6]))
-#colnames(R2.col)[colnames(R2.col)=="r2CU"] <- "Pseudo R2"
-
-pseudo.R21 <- sapply(models1, pR2)["r2CU",]
-
-compare.models1 <- data.frame(
-  model = model.names1,
-  aic = calc.aic1,
-  bic = calc.bic1,
-  sensitivity = unlist(metrics1["sensitivity",]),
-  specificity = unlist(metrics1["specificity",]),
-  PseudoR2 = pseudo.R21
-)
-
-compare.models1
+model.names <- c("H", "H + R", "H + R + Poors", "H + R + Poors + Phys1000")
+models <- list(model.1, model.2, model.3, model.4)
 
 
 
-topmodel <- glm(hicrm ~ region + poors + phys1000, data = cdi, family = "binomial")
+compare.models <- calc.metrics.models(models, model.names)
 
-aicTop <- AIC(topmodel)
-bicTop <- AIC(topmodel, k = log(nrow(cdi)))
-sensitivityTop <- calc.metrics(topmodel)[1]
-specificityTop <- calc.metrics(topmodel)[2]
-R2pseudoTop <- pR2(topmodel)[6]
- interaction.data1 <- cbind("aic" = aicTop, "bic" = bicTop, "sensitivity" = sensitivityTop, "spedificity" = specificityTop, "Pseudo R2" = R2pseudoTop)
+compare.models
 
  
-
 ```
 
+```{r}
+
+top.model <- glm(hicrm ~ region + poors + phys1000, data = cdi, family = "binomial")
+
+metrics <- calc.metrics(top.model)
+rownames(metrics) <- c("Best")
+
+metrics
+
+```
 
 
