@@ -78,7 +78,24 @@ Analysis:
 
 # Introduction
 
-In this paper we bla bla
+Background 
+
+The objective of this report was to determine which covarites that can be used to predict if a US county has a low or high crime rate (per 1000 inhabitants). Data used to do this was county demographic information (CDI) for 440 of the most populous counites in the US 1990-1992. The data entries contains information on the 14 varibles listed below, for each of the counties. The data has been sorted so that counties with missing data has been removed from the dataset.  
+
+
+```{r}
+variables = t(cbind("id", "county", "state", "area", "popul", "pop1834", "pop65plus", "phys", "beds", "crimes", "higrads", "bachelors", "poors", "unemployed", "percapitaincome", "totalincome", "region"))
+
+descriptions = t(cbind("identification number, 1–440", "county name", "state abbreviation", "land area (square miles)", "estimated 1990 population", "percent of 1990 CDI population aged 18–34", "percent of 1990 CDI population aged 65 years old or older", "number of professionally active nonfederal physicians during 1990", "total number of beds, cribs and bassinets during 1990", "total number of serious crimes in 1990 (including murder, rape, robbery,
+aggravated assault, burglary, larceny-theft, motor vehicle theft)", "percent of adults (25 yrs old or older) who completed at least 12 years of school", "percent of adults (25 yrs old or older) with bachelor’s degree", "Percent of 1990 CDI population with income below poverty level", "percent of 1990 CDI labor force which is unemployed", "per capita income of 1990 CDI population (dollars)", "total personal income of 1990 CDI population (in millions of dollars)", "Geographic region classification used by the U.S. Bureau of the Census, where
+1 = Northeast, 2 = Midwest, 3 = South, 4 = West"))
+variable.table = cbind(variables, descriptions)
+
+kable(variable.table, caption = "CDI varibles", col.names = c("Variable", "Description"))
+```
+
+In order to account for size, another varible called crm1000 was added to the data set. crm1000 contains the number of serious crimes per 1000 inhabitants. With the use of the median of this varible the crime rate of a county is classified as high if it is above the median and classified as low if it is below the median. This crime status of the county was stored in another varible called hircrm. In this paper, this categorical varible will be used as the dependent varible. hicrm takes the value 1 if the county is a high crime county and zero if it is a low crime county.
+
 
 
 # Analysis
@@ -323,6 +340,7 @@ as covariate, which one should we choose?
 
 
 ```{r pred_sense_spec2}
+
 
 pred.counties <- subset(cdi, select = c(county, region, hicrm))
 
