@@ -64,7 +64,7 @@ cdi <- cbind(cdi, hicrm = ifelse(cdi$crm1000 < median, 0, 1))
 # Introduction
 
 ## Background and dataset
-The objective of this report is to determine which covarites that can be used to predict if a US county has a low or high crime rate (per 1000 inhabitants). The dataset used to do this was county demographic information (CDI) for 440 of the most populous counites in the US 1990-1992. Each county records includes data on the 14 variables listed below in table \ref{tab:cdi}. Counties with missing data has been removed from the dataset.
+The objective of this report is to determine which covarites that can be used to predict if a US county has a low or high crime rate (serious crimes per 1000 inhabitants). The dataset used to do this was county demographic information (CDI) for 440 of the most populous counites in the US 1990-1992. Each county records includes data on the 14 variables listed below in table \ref{tab:cdi}. Counties with missing data has been removed from the dataset.
 
 
 ```{r}
@@ -78,7 +78,7 @@ variable.table = cbind(variables, descriptions)
 kable(variable.table, caption = "\\label{tab:cdi}CDI dataset columns", col.names = c("Variable", "Description"))
 ```
 
-In order to measure crime rate, another varible called `crm1000` was added to the data set, descibing the number of serious crimes per 1000 inhabitants. Using `crm1000`, counties were divided into counties with high or non-high crime rate, where counties with crime rate higher than the median of `crm1000` in the dataset were categorized as having a high crime rate. This crime status of the county was stored in another column called `hircrm`, which takes the value 1 if the county is a high crime county and zero if it is a low crime county. In this paper, this binary varible will be used as the dependent varible. Similar to crime rate, a covariate `phys1000` was also added, measuring the number of physicians per 1000 inhabitants.
+In order to measure crime rate, another varible called `crm1000` was added, descibing the number of serious crimes per 1000 inhabitants. Using `crm1000`, counties were divided into counties with high or non-high crime rate, where counties with crime rate higher than the median of `crm1000` in the dataset were categorized as having a high crime rate. This crime status of the county was stored in another column called `hircrm`, which takes the value 1 if the county is a high crime county and 0 if it is a low crime county. In this paper, this binary varible will be used as the dependent varible. Similar to crime rate, a variable `phys1000` was also added, measuring the number of physicians per 1000 inhabitants.
 
 ## Model
 The binary dependent variable was modelled using a logistic regression model. This model assumes that the log-odds of a certain observation $i$ is a linear combination of its covariates $X_{j,i}$ and parameters $\beta_i$. As such, the model looks like:
@@ -92,13 +92,14 @@ The binary dependent variable was modelled using a logistic regression model. Th
 
 ### Introduction
 
-The model becomes
+The first model considered has `higrads` as the sole covariate. As such, the model becomes:
 
 \begin{equation}
-  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \beta_{higrads} \cdot X_{higrads,i} + \epsilon_i
+  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \beta_{higrads} \cdot X_{higrads,i}
 \end{equation}
 
-The first model considered had `higrads` as the sole covariate. In order to determine if there is a relationship between `hicrm` and `higrads` they are plotted against each other, see figure \ref{fig:hicrm_higrads}. Because `hicrm` is a binary varible it is very difficult to determine if there is a relationship by the pattern of the plot. In order to circumvent this problem a kernel smoother was added to the plot. The most smooth looking line was attained by setting the bandwidth to 20. The kernel curve was sort of S-shaped, implying that a logistic model may be appropriate. Further, the S-shape is "downward facing", implying a negative $\beta_{higrads}$, as the probability of a county being classified as a high crime county decreases when the amount of higrads in the county increses. Furthermore the fitted model along with its 95 % confidence interval was added to the plot in figure \ref{fig:hicrm_higrads}.
+
+In order to determine if there is a relationship between `hicrm` and `higrads` they are plotted against each other in figure \ref{fig:hicrm_higrads}. Because `hicrm` is a binary varible it is very difficult to determine if there is a relationship only by the pattern in the plot. In order to clarify this relationship, a kernel smoother was added to the plot, where a smooth line was attained with a bandwidth of 20. In addition, the fitted model along with its 95 % confidence interval are included.
 
 
 ```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 5, fig.cap="\\label{fig:hicrm_higrads}Plot of \\texttt{hicrm} against \\texttt{higrads}, including kernel smoothing and prediction of fitted model with 95 \\% confidence interval"}
@@ -136,12 +137,13 @@ with(predx, {
 })
 
 ```
-
-
-As can be seen in figure \ref{fig:hicrm_higrads}, a higher number of `higrads seems to make a county less probable to qualify as high crime county. Logically this makes sense. Tee $\beta$ values together with their 95 % confidence inteval is presented in table \ref{tab:higrad_beta}. Neither one of the $\beta$ confidence interval cover zero, meaning that they are statistically significant at $\alpha$ = 0.05. This is verfied by the very small P value. Something concerning about the plot in figure 1 is the few data point to the middle of the left, as they might influence predicted model in an erronious manner. Moreover the interval covered by the kernel smoother and the predicited model is quite low. 
+As seen in \ref{fig:hicrm_higrads}, the kernel curve looks S-shaped, implying that a logistic model may be appropriate to describe the relationship. Further, the S-shape is "downward facing", implying a negative $\beta_{higrads}$, i.e. that the probability of a county being classified as a high crime decreases when the amount of higrads in the county increases.  Another thing to note in figure \ref{fig:hicrm_higrads} is how few data points exists with `higrads` below 60, meaning that significance is low in this region. In addition, looking at points with `higrads` over 60, the kernel curve and fitted line only cover about 25% - 75%, implying that `higrads` may not predict `hicrm` well.
 
 
 ### Fitted model and significance
+
+In order to study the significance of the model, the $\beta$ values together with their 95 % confidence inteval are presented in table \ref{tab:higrad_beta}.
+
 
 
 ```{r beta_confidence}
@@ -155,10 +157,9 @@ table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta, "P-value" = beta.p)
 row.names(table.beta.ci) <- c("$\\beta_0$", "$\\beta_{higrads}$")
 
 table.caption <- "\\label{tab:higrad_beta}$\\beta$-values of \\texttt{higrad} model, with 95 \\% confidence inteval"
-kable(table.beta.ci, caption = table.caption, digits = c(3,3,3,5))
+kable(table.beta.ci, caption = table.caption, digits = c(rep(2,3), 5))
 
 ```
-
 
 ```{r beta_decrease, include = F}
 or.higrads <- exp(coeff.beta["higrads"])
@@ -175,14 +176,12 @@ decrease.ten.percent
 ```
 
 
-If higrads increases 1%, odd decreases by `r display.percent(decrease.one.percent)`%
-If higrads increases 10%, odd decreases by `r display.percent(decrease.ten.percent)`%
+As seen in the table, all of the P-values are > 0.05, meaning that that `higrads` has a statistically significant effect on `hicrm`. This effect can be measured by looking at $e^{\beta_{higrads}}$, showing that an increase of 1% in `higrads` decreases odds of `hicrm` by `r display.percent(decrease.one.percent)`%, while an increase of 10% decreases odds of by `r display.percent(decrease.ten.percent)`%.
 
 ### Model predictions
 
 
-Using the higrads model,the probability, with confidence interval, of having a high crime rate in a county
-where the amount of higrads is 65 (percent), and where it is 85 (percent) is predicted. The result can be found in table 3.
+Using the higrads model: the probability, with 95 % confidence interval, of having a high crime rate in a county where the amount of higrads is 65 (percent), and where it is 85 (percent) is predicted. The result may be found in table \ref{tab:higrads_predictions}.
 
 ```{r predict}
 x0 <- data.frame(higrads = c(65, 85))
@@ -197,9 +196,10 @@ ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
 ci.odds <- exp(ci.xb)
 
 # and finally CI for the probabilities and add to the plot:
-predx <- cbind(predx * 100, to.prob(ci.odds) * 100)
+predx <- cbind(predx$higrads, predx$prob * 100, to.prob(ci.odds) * 100)
 
-kable(predx, col.names = c("Higrads", "Probability (%)", "2.5 %", "97.5 %"), caption = "Test", digits = 1)
+table.caption <- "\\label{tab:higrads_predictions}Predictions of `higrads` model"
+kable(predx, caption = table.caption, col.names = c("Higrads", "Probability (%)", "2.5 %", "97.5 %"), digits = 1)
 ```
 
 ### Model performance analysis
@@ -241,15 +241,15 @@ specificity.higrads <- sense.spec.higrads$specificity
 
 In order to analyze model performance, the sensitivity and specificity of the model was calculated. The sensitivity of a model is the ratio of predicted positives to real positives in the dataset, while the specificity of a model is the ratio of predicted negatives to real negatives in the dataset. As such, the higher the value of the sensitivity and specificity, the better.
 
-The sensitivity of the model was `display.percent(sensitivity.higrads)`% and `display.percent(specificity.higrads)` of the model was 57.3%. Thereby the higrad model does a rather bad job at correctly clasifying the the crime level status of the counties
+The sensitivity of the model was `r display.percent(sensitivity.higrads)`% and the specificity of the model was `r display.percent(specificity.higrads)`%, implying that the model does not clasify the crime rate of the counties rather successfully.
 
 ## The region model
 
 ### Introduction
 
-Next, a logistic model was adopted based on `region`. Since `region` is not continous , but categorial, it is modelled using "dummy variables" $X_i$. In order to implement this effectively, one of the categories is chosen as a reference variable, and the effects of other categories are measured in comparison to it.
+Next, a logistic model was adopted based on the `region` covariate. Since `region` is not continous, but categorial, it is modelled using "dummy variables" $X_i$. In order to implement this effectively, one of the categories is chosen as a reference variable, and the effects of other categories are measured in comparison to it.
 
-In order to determine this reference variable - a cross-tabulation of the data between `region` and `hirm` is studied, see table \ref{tab:cross-tabulation}.
+In order to determine this reference variable, a cross-tabulation of the data between `region` and `hirm` is studied, see table \ref{tab:cross-tabulation}.
 
 ```{r cross_tabulation}
 
@@ -268,14 +268,14 @@ As a reference region, the one that has the largest number of counties in it’s
 
 Using this reference region, the logistic model becomes
 \begin{equation}
-  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \beta_{Northeast} \cdot X_{Northeast,i} + \beta_{Midwest} \cdot X_{Midwest,i} + \beta_{West} \cdot X_{West,i} + \epsilon_i
+  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \beta_{Northeast} \cdot X_{Northeast,i} + \beta_{Midwest} \cdot X_{Midwest,i} + \beta_{West} \cdot X_{West,i}
 \end{equation}
 
-The $\beta$ coefficients are measured relative to `r reference.level` and $\beta_0$ is log-odds coefficient for `r reference.level`.
+Here, the $\beta$ coefficients are measured relative to `r reference.level`, while $\beta_0$ is log-odds coefficient for `r reference.level`.
 
 ### Fitted model and significance
 
-The model was fit with the given data set, estimating $\beta_i$, shown together with its 95 % confidence interval and P-value, in table \ref{tab:region_beta}.
+The model was fit with the given data set, estimating $\beta_i$, shown together with its 95 % confidence interval and P-value in table \ref{tab:region_beta}.
 
 ```{r region_beta}
 model.region <- glm(hicrm ~ region, data = cdi, family = "binomial")
@@ -291,12 +291,12 @@ table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta, "P-value" = beta.p)
 row.names(table.beta.ci) <- c("$\\beta_0$", "$\\beta_{Northeast}$", "$\\beta_{Midwest}$", "$\\beta_{West}$")
 
 table.caption <- "\\label{tab:region_beta}$\\beta$-estimates for the \\texttt{region} model, together with 95 \\% confidence interval and P-values"
-kable(table.beta.ci, caption = table.caption, digits = 3)
+kable(table.beta.ci, caption = table.caption, digits = c(rep(2,3), 3))
 ```
 
-As may be seen in \ref{tab:region_beta}, the P-values for all of the $\beta$-estimates are not less than 0.05, indicating a lack of statistical significance on a 95 % level. $\beta_{west}$ is the only varible that has a P-value > 0.05. This means that the west region dummy varible might be irrelevant when having south as the reference category.
+As may be seen in table \ref{tab:region_beta}, the P-values for $\beta_{West}$ is  not less than 0.05, indicating a lack of statistical significance in the difference between how South and West predicts `hivrm`.
 
-Next, the odds-ratios for the different categories where determined. The odds-ratios measure the odds of a particular category in relation to the reference category. These may be calculated as $OR_i = e^{\beta_i}$ and are seen in table \ref{tab:region_OR}.
+Next, the odds-ratios for the different categories where determined. The odds-ratios measure the odds of a particular category in relation to the reference category. These may be calculated as $OR_i = e^{\beta_i}$ and may be seen in table \ref{tab:region_OR}.
 
 
 ```{r}
@@ -313,7 +313,7 @@ kable(table.beta.ci, caption = table.caption, digits = 2)
 
 ```
 
-As seen in table \ref{tab:region_OR}, the odds-ratios are less than 1 for all categories but the reference region. This implies that the odds for all regions are lower compared to the reference region, i.e. that the probability of a high crime rate is lower in all regions compared to the reference region. This can also be seen in table \ref{tab:cross-tabulation}.
+As seen in table \ref{tab:region_OR}, the odds-ratios are less than 1 for all categories but the reference region. This implies that the odds for all regions are lower compared to the reference region, i.e. that the probability of a high crime rate is lower in all regions compared to the reference region. This is consistent with table \ref{tab:cross-tabulation}.
 
 
 
@@ -358,7 +358,7 @@ specificity.region <- sense.spec.region$specificity
 
 ```
 
-For the `region`, the sensitivity was `r display.percent(sensitivity.region)`%, while the specificity was `r display.percent(specificity.region)`%.
+For the `region` model, the sensitivity was `r display.percent(sensitivity.region)`%, while the specificity was `r display.percent(specificity.region)`%.
 
 
 Comparing the two models analyzed so far, the `region` model performs better measured on sensitivity and specificity, as seen in table \ref{tab:compare_sense_spec_region_higrad}
@@ -379,7 +379,7 @@ kable(compare.sense, caption = table.caption, col.names = c("Covariate", "Sensit
 ## Combined model and comparison
 
 ### Introduction
-Next a model that uses both `higrads` and `region` is analyzed. As such, this model becomes
+Next a model that uses both `higrads` and `region` is analyzed, i.e. the following model:
 
 \begin{equation}
   \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \beta_{Northeast} \cdot X_{Northeast,i} + \beta_{Midwest} \cdot X_{Midwest,i} + \beta_{West} \cdot X_{West,i} + \beta_{higrads} \cdot X_{higrads,i} + \epsilon_i
@@ -508,7 +508,7 @@ with(cdi, plot(ds ~ xb, ylab = "Deviance residuals", main = "Standardized devian
 abline(h = c(-2, 0, 2), col = "red", lty = 3)
 
 ```
-For a standardized pearson residual to be considered suspiciously large, $|r_i| > |\lambda_{\alpha/2}| ≈ 2$. This is true for 8 of the standadized pearson residuals, which can be seen in figures XX and XX, where the standardized pearson residuals are plotted against the linear predictor. For a deviance residual to be considered too large $|r_i| > 2 $. This is never the case which is verified by figure XX where the standardized devience residuals are plotted against the linear predictor. 
+For a standardized pearson residual to be considered suspiciously large, $|r_i| > |\lambda_{\alpha/2}| \approx 2$. This is true for 8 of the standadized pearson residuals, which can be seen in figures XX and XX, where the standardized pearson residuals are plotted against the linear predictor. For a deviance residual to be considered too large $|r_i| > 2 $. This is never the case which is verified by figure XX where the standardized devience residuals are plotted against the linear predictor. 
 
 In order to measure how the $\beta$-estimates were influenced by indiviual observations Cook's distance for logistic regression was calcultaed and plotted. 
 
