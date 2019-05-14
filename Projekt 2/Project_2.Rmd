@@ -41,6 +41,7 @@ library(knitr)
 library(dplyr)
 library(purrr)
 library(pscl)
+library("GGally")
 
 cdi <- read.delim("CDI.txt")
  
@@ -137,8 +138,6 @@ with(predx, {
 
 ```
 
-
-NÅGOT OM ATT DEN INTE BESKRIVER JÄTTEBRA, BARA FRÅN 60% till 40% DÄR DET FINNS DATA?
 
 As can be seen in figure \ref{fig:hicrm_higrads}, a higher number of `higrads seems to make a county less probable to qualify as high crime county. Logically this makes sense. Tee $\beta$ values together with their 95 % confidence inteval is presented in table \ref{tab:higrad_beta}. Neither one of the $\beta$ confidence interval cover zero, meaning that they are statistically significant at $\alpha$ = 0.05. This is verfied by the very small P value. Something concerning about the plot in figure 1 is the few data point to the middle of the left, as they might influence predicted model in an erronious manner. Moreover the interval covered by the kernel smoother and the predicited model is quite low. 
 
@@ -496,11 +495,6 @@ qqline(r)
 
 The QQ-plot seem to follow a bimodal distribution.
 
-```{r}
-hist(to.prob(exp(r)))
-```
-
-
 
 ```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:residuals_combined}Squared standardized Pearson residuals as well as standardized deviance residuals for the combined model, against the linear predictor $x^{\\beta}$"}
 par(mfrow = c(2, 1))
@@ -516,7 +510,7 @@ with(cdi, plot(ds ~ xb, ylab = "Deviance residuals", main = "Standardized devian
 abline(h = c(-2, 0, 2), col = "red", lty = 3)
 
 ```
-For a standardized pearson residual to be considered suspiciously large, $|r_i| > |\lambda_{\alpha/2}| ≈ 2$. This is true for 8 of the standadized pearson residuals, which can be seen in figures XX and XX, where the standardized pearson residuals are plotted against the linear predictor. For a deviance residual to be considered to large $|r_i| > 2 $. This is never the case which is verified by figure XX where the standardized devience residuals are plotted against the linear predictor. 
+For a standardized pearson residual to be considered suspiciously large, $|r_i| > |\lambda_{\alpha/2}| ≈ 2$. This is true for 8 of the standadized pearson residuals, which can be seen in figures XX and XX, where the standardized pearson residuals are plotted against the linear predictor. For a deviance residual to be considered too large $|r_i| > 2 $. This is never the case which is verified by figure XX where the standardized devience residuals are plotted against the linear predictor. 
 
 In order to measure how the $\beta$-estimates were influenced by indiviual observations Cook's distance for logistic regression was calcultaed and plotted. 
 
@@ -539,8 +533,7 @@ abline(h = c(1, 4 / n), col = "red", lty = 2)
 
 ```
 
-ANALYS HäR
-As can be seen in diagrams XX, XX, XX there are several points over the 4/n thresholds. 
+As can be seen in diagrams XX, XX, XX the vast majoriy of the the observations is below the horizontal line. The amount of counties with a high Cook's distance is limited to 3-4. The data entry with the largest Cook's distance is found in the South region while the rest of the counties with a high Cook's distance is found in the West region. 
 
 
 
@@ -781,10 +774,12 @@ The outlier is `r outlier$county`
 In order to first get a view on the different covariates and how they relate to each other, they are plotted against eachother in figure \ref{fig:pairs}.
 
 ```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:pairs}Plot of covariates against eachother"}
-pairs(~ hicrm + higrads + region + poors + phys1000, data = cdi)
+temp.data <- subset(cdi, select = c(hicrm, higrads, region, poors, phys1000))
+
+ggpairs(temp.data)
 ```
 
-The optimal model includes the previously studied covariate `region`, but discards the `higrads` covariate. In addition, it includes the new `poors` and `phys1000` covariates. One explaination why `higrads` is not used in the optimal may be seen in figure \ref{fig:pairs}, where there seems to be a high correlation between `higrads` and `poors`.
+The optimal model includes the previously studied covariate `region`, but discards the `higrads` covariate. In addition, it includes the new `poors` and `phys1000` covariates. One explaination why `higrads` is not used in the optimal may be seen in figure \ref{fig:pairs}, where there is a high correlation between `higrads` and `poors`. This means that a large part of the correlation between higrads and hicrm is better the effect higrads    
 
 This hypothesis is tested in figure \ref{fig:poors_higrads}, where a linear regression model has been fit. Studying the P-value of the model reveals that the $\beta$-values are highly significant.
 ```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 4, fig.cap="\\label{fig:poors_higrads}Plot of \\texttt{higrads} against \\texttt{poors}, together with linear regression line, with 95 % confidence and prediction intervals"}
