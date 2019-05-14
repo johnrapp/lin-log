@@ -533,7 +533,7 @@ abline(h = c(1, 4 / n), col = "red", lty = 2)
 
 ```
 
-As can be seen in diagrams XX, XX, XX the vast majoriy of the the observations is below the horizontal line. The amount of counties with a high Cook's distance is limited to 3-4. The data entry with the largest Cook's distance is found in the South region while the rest of the counties with a high Cook's distance is found in the West region. The Cook's distance daigrams give no concern to why the combined model should be amiss.
+As can be seen in diagrams XX, XX, XX the vast majoriy of the the observations is below the horizontal line. The amount of counties with a high Cook's distance is limited to 3-4. The data entry with the largest Cook's distance is found in the South region while the rest of the counties with a high Cook's distance is found in the West region. The Cook's distance daigrams give no concern to why the combined model should be amiss
 
 
 ## Interaction model
@@ -580,7 +580,7 @@ kable(compare.models, caption = table.caption, col.names = col.names, digits = c
 
 
 ```{r, out.extra = '', fig.pos = "h", fig.width = 6, fig.height = 4, fig.cap="\\label{fig:qq-plot_interaction}QQ-plot for the integration model"}
-model.plot <- model.both
+model.plot <- model.interaction
 influence.plot <- influence(model.plot)
   
 xb <- predict(model.plot)
@@ -604,6 +604,9 @@ abline(h = c(-2, 0, 2), col = "red", lty = 3)
 
 ```
 
+The interaction has more Person residuals that can be considered suspisiously large than the combined model. Furthermore it has standardized devience residuals that are too large. This questions the of the credability of the interaction model.
+
+
 ```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:cooks_interaction}Cook's distance, for the interaction model, against linear predictor, region as well as higrads"}
 layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
 
@@ -623,7 +626,9 @@ abline(h = c(1, 4 / n), col = "red", lty = 2)
 
 Both models perform better on some metrics, while performing worse on other. The interaction model has a worse AIC-value, but a lower BIC-value (KOMMENTERA). The sensitivity, specificity and Pseudo $R^2$ values are worse for the interaction model.
 
-NÅGOT OM COOKS MM?
+The interaction model performs considerably worse than the combined model on the Cook's distance acount. The interaction model have far more outliers and outliers with a much higher Cook's distance. 
+
+As aforementioned, the interaction model has several credability issues with its residuals. Moreover the interaction model has far more outliers that as well have markedly larger Cook's distance than the combined model. The interaction model outperforms the combined model on likelyhood ratio test and bic, however in every other regard the combined model outperforms the interaction model. Thus the combined model was favoured and interaction terms were disregarded.
 
 VILKEN ÄR BÄST?
 
