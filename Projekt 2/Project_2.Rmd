@@ -622,13 +622,9 @@ abline(h = c(1, 4 / n), col = "red", lty = 2)
 
 ```
 
-Both models perform better on some metrics, while performing worse on other. The interaction model has a worse AIC-value, but a lower BIC-value (KOMMENTERA). The sensitivity, specificity and Pseudo $R^2$ values are worse for the interaction model.
+Both models perform better on some metrics, while performing worse on other. The interaction model has a worse AIC-value, but a lower BIC-value. The sensitivity, specificity and Pseudo $R^2$ values are worse for the interaction model.The interaction model performs considerably worse than the combined model on the Cook's distance acount. The interaction model have far more outliers and outliers with a much higher Cook's distance. 
 
-The interaction model performs considerably worse than the combined model on the Cook's distance acount. The interaction model have far more outliers and outliers with a much higher Cook's distance. 
-
-As aforementioned, the interaction model has several credability issues with its residuals. Moreover the interaction model has far more outliers that as well have markedly larger Cook's distance than the combined model. The interaction model outperforms the combined model on likelyhood ratio test and bic, however in every other regard the combined model outperforms the interaction model. Thus the combined model was favoured and interaction terms were disregarded.
-
-VILKEN ÄR BÄST?
+As aforementioned, the interaction model has several credibility issues with its residuals. Moreover the interaction model has far more outliers that as well have markedly larger Cook's distance than the combined model. The interaction model outperforms the combined model on likelyhood ratio test and bic, however in every other regard the combined model outperforms the interaction model. Thus the combined model was favoured and interaction terms were disregarded.
 
 ## Finding the optimal model
 
