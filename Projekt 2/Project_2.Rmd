@@ -1,0 +1,713 @@
+---
+title: "Project 2"
+author: "Axel Sjöberg & John Rapp Farnes"
+date: "14 maj 2019"
+output:
+  pdf_document:
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+    toc_depth: 3
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
+classoption: a4paper
+---
+
+```{r setup_knitr, include = FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  collapse = TRUE,
+  comment = "#>"
+)
+
+options(tinytex.verbose = TRUE)
+```
+
+```{r setup_pdf, eval = FALSE}
+# Install from CRAN
+install.packages('rmarkdown')
+# Render PDF
+install.packages("tinytex")
+tinytex::install_tinytex()  # install TinyTeX
+
+```
+
+
+```{r init_vars, include = FALSE}
+library(ggplot2)
+library(knitr)
+library(dplyr)
+library(purrr)
+library(pscl)
+
+cdi <- read.delim("CDI.txt")
+ 
+region.names <- c("Northeast", "Midwest", "South", "West")
+cdi$region <- factor(cdi$region, levels = c(1, 2, 3, 4),
+                     labels = region.names)
+  
+cdi$crm1000 <- 1000 * cdi$crimes / cdi$popul
+cdi$phys1000 = 1000 * cdi$phys / cdi$popul
+
+
+median = summary(cdi$crm1000)["Median"]
+
+cdi <- cbind(cdi, hicrm = ifelse(cdi$crm1000 < median, 0, 1))
+```
+
+
+\newpage
+
+# Introduction
+
+## Background and dataset
+The objective of this report was to determine which covarites that can be used to predict if a US county has a low or high crime rate (per 1000 inhabitants). Data used to do this was county demographic information (CDI) for 440 of the most populous counites in the US 1990-1992. The record for each county includes data on the 14 variables listed below. Counties with missing data has been removed from the dataset.
+
+
+```{r}
+variables = c("id", "county", "state", "area", "popul", "pop1834", "pop65plus", "phys", "beds", "crimes", "higrads", "bachelors", "poors", "unemployed", "percapitaincome", "totalincome", "region")
+
+descriptions = c("identification number, 1–440", "county name", "state abbreviation", "land area (square miles)", "estimated 1990 population", "percent of 1990 CDI population aged 18–34", "percent of 1990 CDI population aged 65 years old or older", "number of professionally active nonfederal physicians during 1990", "total number of beds, cribs and bassinets during 1990", "total number of serious crimes in 1990", "percent of adults (25 yrs old or older) who completed at least 12 years of school", "percent of adults (25 yrs old or older) with bachelor’s degree", "Percent of 1990 CDI population with income below poverty level", "percent of 1990 CDI labor force which is unemployed", "per capita income of 1990 CDI population (dollars)", "total personal income of 1990 CDI population (in millions of dollars)", "Geographic region classification used by the U.S. Bureau of the Census,
+                   including Northeast, Midwest, South and West")
+
+variable.table = cbind(variables, descriptions)
+
+kable(variable.table, caption = "CDI dataset columns", col.names = c("Variable", "Description"))
+```
+
+In order to measure crime rate, another varible called `crm1000` was added to the data set, descibing the number of serious crimes per 1000 inhabitants. Using this variable, counties were divided into counties with high or non-high crime rate, using the median of `crm1000`, where counties with crime rate higher than the median were categorized as having a high crime rate. This crime status of the county was stored in another column called `hircrm`, which takes the value 1 if the county is a high crime county and zero if it is a low crime county. In this paper, this binary varible will be used as the dependent varible. This binary dependent value was then modelled using \textbf{logistic regression}.
+
+
+## Model
+The logistic regression model used models the log-odds of a certain observation $i$ as a linear combination of its covariates $X_{j,i}$ and parameters $\beta_i$, with together with an additive error $\epsilon_i$. These error terms are assumed to follow a normal distribution and be indipendent, i.e. $\epsilon \sim N(0, \sigma)$ i.i.d. 
+\begin{equation}
+  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \sum_j\beta_{j} \cdot X_{j,i} + \epsilon_i
+\end{equation}
+
+# Analysis
+
+## The higrad model
+
+### Introduction
+
+The first model considered had `higrads` as the sole covariate. In order to determine if there is a relationship between `hicrm` and `higrads` they are plotted against each other, see figure \ref{fig:hicrm_higrads}. Because `hicrm` is a binary varible it is very difficult to determine if there is a relationship by the pattern of the plot. In order to circumvent this problem a kernel smoother was added to the plot. The most smooth looking line was attained by setting the bandwidth to 20. The kernel curve was approximately of S-shaped, implying that a logistic model may be appropriate. Further, the S-shape is "downward facing", implying a negative $\beta_1$ <!-- DETTA MÅSTE FÖRKLARAS VAD DET ÄR FÖRST-->. Furthermore the fitted model along with its 95 % confidence interval was added to the plot in figure \ref{fig:hicrm_higrads}.
+
+
+```{r code_plot, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 5, fig.cap="\\label{fig:hicrm_higrads}Plot of \\texttt{hicrm} against \\texttt{higrads}, including kernel smoothing and prediction of fitted model with 95 \\% confidence interval"}
+with(cdi, {
+   plot(hicrm ~ higrads)
+   lines(ksmooth(higrads, hicrm, bandwidth = 20))
+})
+
+model.higrads <- glm(hicrm ~ higrads, data = cdi, family = "binomial")
+sum <- summary(model.higrads)
+
+x0 <- data.frame(higrads = seq(0, 100, 1))
+
+predx <- cbind(x0, prob = predict(model.higrads, x0, type = "response"))
+with(predx, lines(higrads, prob, col = "blue"))
+
+# calculate conf.int for the linear part x*beta:
+standard.error <- 1.96
+xb <- predict(model.higrads, x0, se.fit = TRUE)
+ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
+                    upr = xb$fit + standard.error * xb$se.fit)
+
+# transform to CI for the odds:
+ci.odds <- exp(ci.xb)
+
+to.prob = function(odds) {
+  return (odds / (1 + odds))
+}
+
+# and finally CI for the probabilities and add to the plot:
+predx <- cbind(predx, to.prob(ci.odds))
+with(predx, {
+  lines(higrads, lwr, lty = 2, col = "red")
+  lines(higrads, upr, lty = 2, col = "red")
+})
+
+```
+
+
+NÅGOT OM ATT DEN INTE BESKRIVER JÄTTEBRA, BARA FRÅN 60% till 40% DÄR DET FINNS DATA?
+
+As can be seen in figure \ref{fig:hicrm_higrads}, a higher number of higrads seems to make a county less probable to qualify as high crime county. Logically this makes sense. THe B!! values together with their 95 % confidence inteval is presented in table \ref{tab:higrad_beta}. Neither one of the B! confidence interval cover zero meaning that they are statistically significant at $\alpha$ = 0.05. This is verfied by the very small P value.  
+
+The model becomes
+
+\begin{equation}
+  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \beta_{higrads} \cdot X_{higrads,i} + \epsilon_i
+\end{equation}
+
+### Fitted model and significance
+
+
+```{r beta_confidence}
+coeff.beta <- model.higrads$coefficients
+
+ci.beta <- suppressMessages(confint(model.higrads))
+
+beta.p <- sum$coefficients[, "Pr(>|z|)"]
+
+table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta, "P-value" = beta.p)
+row.names(table.beta.ci) <- c("$\\beta_0$", "$\\beta_{higrads}$")
+
+table.caption <- "\\label{tab:higrad_beta}$\\beta$-values of \\texttt{higrad} model, with 95 \\% confidence inteval"
+kable(table.beta.ci, caption = table.caption, digits = c(3,3,3,5))
+
+```
+
+
+```{r beta_decrease, include = F}
+or.higrads <- exp(coeff.beta["higrads"])
+
+decrease.one.percent <- 1 - or.higrads
+decrease.ten.percent <- 1 - or.higrads^10
+
+display.percent <- function(value) {
+  return(round(value * 100, digits=1))
+}
+
+decrease.one.percent
+decrease.ten.percent
+```
+
+If higrads increases 1%, odd decreases by `r display.percent(decrease.one.percent)`%
+If higrads increases 10%, odd decreases by `r display.percent(decrease.ten.percent)`%
+
+Table XX shows the odds ratio of having a high crime rate when the amount of higrads is increased by 1 and 10 % respectively. As can be seen in the table there is a substantial effect on the mentioned odds when the number of higrads is increased by 10 %.
+
+TODO make table of odds ratio!!!!
+ODDS RATIO TYP INTE LIKA INTRESSANT HÄR, FÖR DEN ÄR SAMMA SOM decrease.one.percent
+
+### Model predictions
+
+
+Using the higrads model,the probability, with confidence interval, of having a high crime rate in a county
+where the amount of higrads is 65 (percent), and where it is 85 (percent) is predicted. The result can be found in table XX.
+
+```{r predict}
+x0 <- data.frame(higrads = c(65, 85))
+
+
+predx <- cbind(x0, prob = predict(model.higrads, x0, type = "response"))
+
+xb <- predict(model.higrads, x0, se.fit = TRUE)
+ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
+                    upr = xb$fit + standard.error * xb$se.fit)
+# transform to CI for the odds:
+ci.odds <- exp(ci.xb)
+
+# and finally CI for the probabilities and add to the plot:
+predx <- cbind(predx * 100, to.prob(ci.odds) * 100)
+
+kable(predx, col.names = c("Higrads", "Probability (%)", "2.5 %", "97.5 %"), caption = "Test", digits = 1)
+```
+
+### Model performance analysis
+
+Use the model to predict, for each of the counties, whether it would be expected to have a low or a high crime 
+rate (predicted probability below or above 0.5) and calculate the sensitivity and specificity for this model.'
+
+The sensitivity and specificity of the model is shown in table XX. (TODO make the table). As can be seen the higrad model does a rather bad job at correctly clasifying the the crime level status of the counties
+
+Sensitivity is the proportion of the true successes that have been correctly classified as successes (true positive).
+Specificity is the proportion of the true failures that have been correctly classified as failures (true negatives).
+
+
+```{r pred_sense_spec, include = F}
+
+calc.sense.spec = function(model) {
+  pred.counties <- cdi
+
+  pred.counties <- cbind(pred.counties, prob.hicrm = predict(model, pred.counties, type = "response"))
+  pred.counties <- cbind(pred.counties, pred.hicrm = ifelse(pred.counties$prob.hicrm > 0.5, 1, 0))
+  
+  num.hicrm <- sum(pred.counties$hicrm)
+  
+  # Sensitivity
+  true.postive <- with(pred.counties, ifelse(pred.hicrm == 1 & hicrm == 1, 1, 0))
+  sensitivity <- sum(true.postive) / num.hicrm
+  sensitivity
+  
+  # Specificity
+  true.negative <- with(pred.counties, ifelse(pred.hicrm == 0 & hicrm == 0, 1, 0))
+  specificity <- sum(true.negative) / num.hicrm
+  specificity
+  
+  metrics <- data.frame(
+    sensitivity,
+    specificity
+  )
+  
+  return(metrics)
+}
+
+sense.spec.higrads <- calc.sense.spec(model.higrads)
+
+sensitivity.higrads <- sense.spec.higrads$sensitivity
+specificity.higrads <- sense.spec.higrads$specificity
+
+```
+
+Sensitivity was `r display.percent(sensitivity.higrads)`%
+
+Specificity was `r display.percent(specificity.higrads)`%
+
+
+## The region model
+
+### Introduction
+
+Next, a logistic model was adopted based on `region`. Since `region` is not continous , but categorial, it is modelled using "dummy variables" $X_i$. In order to implement this effectively, one of the categories is chosen as a reference variable, and the effects of other categories are measured in comparison to it.
+
+In order to determine this reference variable - a cross-tabulation of the data between `region` and `hirm` is studied, see table \ref{tab:cross-tabulation}.
+
+```{r cross_tabulation}
+
+cross.table <- table(cdi %>% select(region, hicrm))
+
+table.caption <- "\\label{tab:cross-tabulation}Cross-tabulation between \\texttt{region} and \\texttt{hicrm}"
+kable(cross.table, col.names = c("Low crime", "High crime"), caption = table.caption)
+
+reference.level <- "South"
+cdi$region <- relevel(cdi$region, ref = reference.level)
+
+```
+
+As a reference region, the one that has the largest number of counties in it’s smallest low/high category was chosen. As a tie-breaker, the other low/high category was used. This approach produces the lowest standard error, and therefore highest significance. As seen in table \ref{tab:cross-tabulation}, the above given condition results in choosing `r reference.level` as reference region.
+
+
+Using this reference region, the logistic model becomes
+\begin{equation}
+  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \beta_{Northeast} \cdot X_{Northeast,i} + \beta_{Midwest} \cdot X_{Midwest,i} + \beta_{West} \cdot X_{West,i} + \epsilon_i
+\end{equation}
+
+The $\beta$ coefficients are measured relative to `r reference.level` and $\beta_0$ is log-odds coefficient for `r reference.level`.
+
+### Fitted model and significance
+
+The model was fit with the given data set, estimating $\beta_i$, shown together with its 95 % confidence interval and P-value, in table \ref{tab:region_beta}.
+
+```{r region_beta}
+model.region <- glm(hicrm ~ region, data = cdi, family = "binomial")
+
+coeff.beta <- model.region$coefficients
+
+ci.beta <- suppressMessages(confint(model.region))
+
+beta.p <- sum$coefficients[, "Pr(>|z|)"]
+
+table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta, "P-value" = beta.p)
+row.names(table.beta.ci) <- c("$\\beta_0$", "$\\beta_{Northeast}$", "$\\beta_{Midwest}$", "$\\beta_{West}$")
+
+table.caption <- "\\label{tab:region_beta}$\\beta$-estimates for the \\texttt{region} model, together with 95 \\% confidence interval and P-values"
+kable(table.beta.ci, caption = table.caption, digits = c(3,3,3,5))
+
+```
+
+As may be seen in \ref{tab:region_beta}, the P-values for all of the $\beta$-estimates are less than 0.05, indicating statistical significance on a 95 % level.
+
+Next, the odds-ratios for the different categories where determined. The odds-ratios measure the odds of a particular category in relation to the reference category. These may be calculated as $OR_i = e^{\beta_i}$ and are seen in table \ref{tab:region_OR}.
+
+
+```{r}
+beta.region <- exp(coeff.beta)
+
+table.beta.ci <- cbind("OR" = exp(coeff.beta), exp(ci.beta))
+table.beta.ci <- table.beta.ci[-c(1), ]
+
+row.names(table.beta.ci) <- region.names[region.names != reference.level]
+
+table.caption <- "\\label{tab:region_OR}Odds-ratios for the \\texttt{region} model, together with 95 \\% confidence interval"
+kable(table.beta.ci, caption = table.caption, digits = 2)
+
+
+```
+
+As seen in table \ref{tab:region_OR}, the odds-ratios are less than 1 for all categories but the reference region. This implies that the odds for all regions are lower compared to the reference region, i.e. that the probability of a high crime rate is lower in all regions compared to the reference region. This can also be seen in table \ref{tab:cross-tabulation}.
+
+
+
+### Model predictions
+
+Using the fitted model, the probabilies of having a high crime rate, with confidence interval, for the different regions was determined, shown in table \ref{tab:region_prob}.
+
+
+```{r}
+
+
+pred.counties <- subset(cdi, select = c(county, region, hicrm))
+
+x0 <- data.frame(region = region.names)
+
+pred <- predict(model.region, x0, se.fit = TRUE, type = "response")
+
+
+## confidence interval for log-odds
+ci.prob <- cbind("2.5 %" = pred$fit - standard.error * pred$se.fit, 
+                "97.5 %" = pred$fit + standard.error * pred$se.fit)
+
+
+table.prob.ci <- cbind("Probability (%)" = pred$fit * 100, ci.prob * 100)
+row.names(table.prob.ci) <- region.names
+
+table.caption <- "\\label{tab:region_prob}Probability of high crime rate (\\%), together with 95 \\% confidence interval for each of the regions"
+
+kable(table.prob.ci, caption = table.caption, digits = 1)
+
+
+```
+
+### Model performance analysis
+
+In order to analyze model performance, the sensitivity and specificity of the model was calculated. The sensitivity of a model is the ratio of predicted positives to real positives in the dataset, while the specificity of a model is the ratio of predicted negatives to real negatives in the dataset. As such, the higher the value of the sensitivity and specificity, the better.
+
+
+```{r, include = F}
+sense.spec.region <- calc.sense.spec(model.region)
+
+sensitivity.region <- sense.spec.region$sensitivity
+specificity.region <- sense.spec.region$specificity
+
+```
+
+For the `region`, the sensitivity was `r display.percent(sensitivity.region)`%, while the specificity was `r display.percent(specificity.region)`%.
+
+
+Comparing the two models analyzed so far, the `region` model performs better measured on sensitivity and specificity, as seen in table \ref{tab:compare_sense_spec_region_higrad}
+
+```{r}
+
+compare.sense <- data.frame(
+  "Covariate" = c("Higrads", "Region"),
+  "Sensitivity" = c(sensitivity.higrads, sensitivity.region) * 100,
+  "Specificity" = c(specificity.higrads, specificity.region) * 100
+);
+
+table.caption <- "\\label{tab:compare_sense_spec_region_higrad}$Comparison of sensitivity and specificity of \\texttt{higrad} and \\texttt{region} model"
+kable(compare.sense, caption = table.caption, col.names = c("Covariate", "Sensitivity (%)", "Specificity (%)"), digits = 1)
+
+```
+
+## Combined model and comparison
+
+### Introduction
+Next a model that uses both `higrads` and `region` is analyzed. As such, this model becomes
+
+\begin{equation}
+  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \beta_{Northeast} \cdot X_{Northeast,i} + \beta_{Midwest} \cdot X_{Midwest,i} + \beta_{West} \cdot X_{West,i} + \beta_{higrads} \cdot X_{higrads,i} + \epsilon_i
+\end{equation}
+
+### Model comparison
+
+In order to compare the models, metrics other than sensitivity and specificity may be studied. Some of these are AIC and BIC, which describe \textbf{WHAT?} and Nagelkerke psuedo $R^2$, which decribes \textbf{WHAT?}. As they are defined, AIC and BIC should be as low as possible for a model to be performant, while psuedo $R^2$ should be as high as possible.
+
+Comparison between the models in regards to AIC, BIC and Psuedo $R^2$ are seen in figure \ref{fig:comparison_region_higrads_both}, while comparison of sensitivity and specificity is seen in table \ref{tab:compare_sense_spec_region_higrad_both}.
+
+```{r, include = F}
+model.both <- glm(hicrm ~ higrads + region, data = cdi, family = "binomial")
+
+model.names <- c("Higrads", "Region", "Both")
+models <- list(model.higrads, model.region, model.both)
+
+calc.metrics = function(model) {
+  calc.aic <- AIC(model)
+  calc.bic <- AIC(model, k = log(nrow(cdi)))
+  sense.spec <- calc.sense.spec(model)
+  
+  pseudo.R2 <- pR2(model)["r2CU"]
+  
+  metrics <- data.frame(
+    aic = calc.aic,
+    bic = calc.bic,
+    sensitivity = sense.spec$sensitivity,
+    specificity = sense.spec$specificity,
+    PseudoR2 = pseudo.R2
+  )
+  
+  return (metrics)
+}
+calc.metrics.models = function(models, model.names) {
+  models.metrics <- lapply(models, calc.metrics)
+
+  compare.models <- do.call(rbind, models.metrics)
+  compare.models <- cbind(model.name = model.names, compare.models)
+  rownames(compare.models) <- NULL
+  
+  return (compare.models)  
+}
+
+compare.models <- calc.metrics.models(models, model.names)
+compare.models
+```
+
+
+
+```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 5, fig.cap="\\label{fig:comparison_region_higrads_both}Comparison of AIC and BIC and Nagelkerke psuedo $R^2$ for the different models"}
+
+n <- nrow(compare.models)
+x <- 1:n
+with(compare.models, {
+  par(mar = c(5, 4, 4, 4) + 0.3)  # Leave space for second axis
+  
+  plot(x, rep(0, n), type = "n", ylim = c(500, 650), xaxt = "n",
+       ylab = "AIC/BIC", xlab = "Model",
+       main = "Model comparison")
+  axis(1, at = x, labels = model.name)
+  lines(x, aic, col = "red", lty = 2, lwd = 2)
+  lines(x, bic, col = "red", lty = 1, lwd = 2)
+  
+  par(new = TRUE)
+  plot(x, rep(0, n), type = "n", axes = FALSE, ylim = c(0, 1), xaxt = "n",
+     xlab = "", ylab = "")
+  lines(x, PseudoR2, col = "blue", lty = 1, lwd = 2)
+  best.model <- 3
+  axis(side=4, at = pretty(c(0, 1)))
+  mtext("Pseudo R^2", side=4, line=3)
+  
+  legend("topright",legend=c("BIC", "AIC","Pseudo R^2"),
+    text.col=c("red","red", "blue"), lty=c(1, 2, 1),col=c("red","red", "blue"))
+  
+})
+```
+
+```{r}
+compare.sense <- compare.models %>% select(model.name, sensitivity, specificity)
+compare.sense$sensitivity <- compare.models$sensitivity * 100
+compare.sense$specificity <- compare.models$specificity * 100
+
+table.caption <- "\\label{tab:compare_sense_spec_region_higrad_both}Comparison of sensitivity and specificity of models"
+kable(compare.sense, caption = table.caption, col.names = c("Covariate", "Sensitivity (%)", "Specificity (%)"), digits = 1)
+
+```
+
+As seen in figure \ref{fig:comparison_region_higrads_both} and table \ref{tab:compare_sense_spec_region_higrad_both}, the combined model with both the covariates performs the best on all the studied metrics.
+
+### Combined model performance
+
+Performance of the combined model can be analyzed by studying a QQ-plot (see figure \ref{fig:qq-plot_combined}) the squared standardized Pearson residuals and the standardized deviance residuals against the linear predictor $x^{\beta}$ (see figure \ref{fig:residuals_combined}). As well as the Cook’s distance against the linear predictor, and against `higrads` and against `region` (see figure \ref{fig:cooks_combined}).
+
+
+\newpage
+
+```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 7, fig.cap="\\label{fig:qq-plot_combined}QQ-plot for the combined model"}
+model.plot <- model.both
+influence.plot <- influence(model.plot)
+  
+xb <- predict(model.plot)
+
+r <- influence.plot$pear.res / sqrt(1 - influence.plot$hat)
+ds <- influence.plot$dev.res / sqrt(1 - influence.plot$hat)
+
+qqnorm(r)
+qqline(r)
+
+```
+
+```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:residuals_combined}Squared standardized Pearson residuals as well as standardized deviance residuals for the combined model, against the linear predictor $x^{\\beta}$"}
+par(mfrow = c(2, 1))
+
+with(cdi, plot(r^2 ~ xb, ylab = "Squared Pearson residuals", main = "Squared standardized Pearson residuals against linear predictor"))
+abline(h = c(-2, 0, 2), col = "red", lty = 3)
+
+with(cdi, plot(ds ~ xb, ylab = "Deviance residuals", main = "Standardized deviance residuals against linear predictor"))
+abline(h = c(-2, 0, 2), col = "red", lty = 3)
+
+```
+
+```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:cooks_combined}Cook's distance, for the combined model, against linear predictor, region as well as higrads"}
+layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
+
+n <- nrow(cdi)
+cook.plot <- cooks.distance(model.plot)
+
+with(cdi, plot(cook.plot ~ xb, ylab = "Cook's distance", main = "Cook's distance against linear predictor"))
+abline(h = c(1, 4 / n), col = "red", lty = 2)
+
+with(cdi, plot(cook.plot ~ region, ylab = "Cook's distance", main = "Cook's distance against region"))
+abline(h = c(1, 4 / n), col = "red", lty = 2)
+
+with(cdi, plot(cook.plot ~ higrads, ylab = "Cook's distance", main = "Cook's distance against higrads"))
+abline(h = c(1, 4 / n), col = "red", lty = 2)
+
+
+```
+
+ANALYS HäR
+
+Anything alarmin?
+Any interesting finds?
+
+## Interaction model
+### Introduction
+As a forth model, interaction terms are also comsidered, building in that the effect of higrads may be different in different regions, where the log-odds in the model includes interaction terms such as $\beta_{Northeast * higrads} \cdot X_{higrads,i}$.
+
+
+### Model performance
+
+The performance of the interaction model compared to the combined model may be analyzed by the likelihood test. This test \textbf{FUNKAR HUR?}, and the result may be seen in table XX. In addition, the AIC, BIC, Nagelkerke, sensitivity and specificity is compared to the combined model, in table XX. In order to test assumptions, the residuals and Cook’s distance are plotted in figure XX.
+
+
+
+```{r}
+# TODO
+model.interaction <- glm(hicrm ~ higrads * region, data = cdi, family = "binomial")
+
+#Likelihood test
+anova(model.both, model.interaction)
+(Ddiff <- model.interaction$null.deviance - model.interaction$deviance)
+# P-value for the test:
+(dfdiff <- model.interaction$df.null - model.interaction$df.residual)
+
+
+```
+
+```{r}
+
+models <- list(model.interaction, model.both)
+model.names <- c("Combined model", "Interaction model")
+
+compare.models <- calc.metrics.models(models, model.names)
+
+compare.models$sensitivity <- compare.models$sensitivity * 100
+compare.models$specificity <- compare.models$specificity * 100
+
+col.names <- c("Covariate", "AIC", "BIC", "Sensitivity (%)", "Specificity (%)", "Pseudo R2")
+table.caption <- "\\label{tab:compare_sense_spec_integration}Comparison of sensitivity and specificity of models"
+kable(compare.models, caption = table.caption, col.names = col.names, digits = c(rep(0, 5), 2))
+
+
+```
+
+
+\newpage
+
+
+```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 7, fig.cap="\\label{fig:qq-plot_integration}QQ-plot for the integration model"}
+model.plot <- model.both
+influence.plot <- influence(model.plot)
+  
+xb <- predict(model.plot)
+
+r <- influence.plot$pear.res / sqrt(1 - influence.plot$hat)
+ds <- influence.plot$dev.res / sqrt(1 - influence.plot$hat)
+
+qqnorm(r)
+qqline(r)
+
+```
+
+```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:residuals_integration}Squared standardized Pearson residuals as well as standardized deviance residuals for the interaction model, against the linear predictor $x^{\\beta}$"}
+par(mfrow = c(2, 1))
+
+with(cdi, plot(r^2 ~ xb, ylab = "Squared Pearson residuals", main = "Squared standardized Pearson residuals against linear predictor"))
+abline(h = c(-2, 0, 2), col = "red", lty = 3)
+
+with(cdi, plot(ds ~ xb, ylab = "Deviance residuals", main = "Standardized deviance residuals against linear predictor"))
+abline(h = c(-2, 0, 2), col = "red", lty = 3)
+
+```
+
+```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:cooks_integration}Cook's distance, for the interaction model, against linear predictor, region as well as higrads"}
+layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
+
+n <- nrow(cdi)
+cook.plot <- cooks.distance(model.plot)
+
+with(cdi, plot(cook.plot ~ xb, ylab = "Cook's distance", main = "Cook's distance against linear predictor"))
+abline(h = c(1, 4 / n), col = "red", lty = 2)
+
+with(cdi, plot(cook.plot ~ region, ylab = "Cook's distance", main = "Cook's distance against region"))
+abline(h = c(1, 4 / n), col = "red", lty = 2)
+
+with(cdi, plot(cook.plot ~ higrads, ylab = "Cook's distance", main = "Cook's distance against higrads"))
+abline(h = c(1, 4 / n), col = "red", lty = 2)
+
+```
+
+Both models perform better on some metrics, while performing worse on other. The interaction model has a worse AIC-value, but a lowe BIC-value (KOMMENTERA). The sensitivity, specificity and Pseudo $R^2$ values are worse for the interaction model.
+
+NÅGOT OM COOKS MM?
+
+VILKEN ÄR BÄST?
+
+## Finding the optimal model
+
+### Methology
+
+
+Find a better model using combinations of the variables higrads, region, poors and
+phys1000 = 1000*phys/popul (see Lab 3). You may ignore interactions. Motivate why your model
+is better.
+
+```{R}
+pairs(~ hicrm + higrads + region + poors + phys1000, data = cdi)
+```
+
+
+```{R}
+model.1 <- glm(hicrm ~ higrads, data = cdi, family = "binomial")
+model.2 <- glm(hicrm ~ higrads + region, data = cdi, family = "binomial")
+model.3 <- glm(hicrm ~ higrads + region + poors, data = cdi, family = "binomial")
+model.4 <- glm(hicrm ~ higrads + region + poors + phys1000, data = cdi, family = "binomial")
+model.5 <- glm(hicrm ~ region + poors + phys1000, data = cdi, family = "binomial")
+
+
+model.names <- c("H", "H + R", "H + R + Poors", "H + R + Poors + Phys", "R + Poors + Phys")
+models <- list(model.1, model.2, model.3, model.4, model.5)
+
+compare.models <- calc.metrics.models(models, model.names)
+
+compare.models
+
+ 
+```
+
+```{r, out.extra = '', fig.pos = "h", fig.width = 10, fig.height = 5, fig.cap="\\label{fig:comparison_best}Comparison of AIC and BIC and Nagelkerke psuedo $R^2$ for the different models"}
+
+n <- nrow(compare.models)
+x <- 1:n
+with(compare.models, {
+  par(mar = c(5, 4, 4, 4) + 0.3)  # Leave space for second axis
+  
+  plot(x, rep(0, n), type = "n", ylim = c(450, 650), xaxt = "n",
+       ylab = "AIC/BIC", xlab = "Model",
+       main = "Model comparison")
+  axis(1, at = x, labels = model.name)
+  lines(x, aic, col = "red", lty = 2, lwd = 2)
+  lines(x, bic, col = "red", lty = 1, lwd = 2)
+  
+  par(new = TRUE)
+  plot(x, rep(0, n), type = "n", axes = FALSE, ylim = c(0, 1), xaxt = "n",
+     xlab = "", ylab = "")
+  lines(x, PseudoR2, col = "blue", lty = 1, lwd = 2)
+  best.model <- 3
+  axis(side=4, at = pretty(c(0, 1)))
+  mtext("Pseudo R^2", side=4, line=3)
+  
+  legend("topright",legend=c("BIC", "AIC","Pseudo R^2"),
+    text.col=c("red","red", "blue"), lty=c(1, 2, 1),col=c("red","red", "blue"))
+  
+})
+```
+
+TODO steppa med inbyggda funktionen
+
+### Model performance
+
+```{r}
+
+top.model <- model.5
+
+metrics <- calc.metrics(top.model)
+rownames(metrics) <- c("Best")
+
+metrics
+
+```
+
+
