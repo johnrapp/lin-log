@@ -531,12 +531,8 @@ abline(h = c(1, 4 / n), col = "red", lty = 2)
 
 ```
 
-As can be seen in diagrams XX, XX, XX the vast majoriy of the the observations is below the horizontal line. The amount of counties with a high Cook's distance is limited to 3-4. The data entry with the largest Cook's distance is found in the South region while the rest of the counties with a high Cook's distance is found in the West region. 
+As can be seen in diagrams XX, XX, XX the vast majoriy of the the observations is below the horizontal line. The amount of counties with a high Cook's distance is limited to 3-4. The data entry with the largest Cook's distance is found in the South region while the rest of the counties with a high Cook's distance is found in the West region. The Cook's distance daigrams give no concern to why the combined model should be amiss
 
-
-
-Anything alarmin?
-Any interesting finds?
 
 ## Interaction model
 ### Introduction
@@ -582,7 +578,7 @@ kable(compare.models, caption = table.caption, col.names = col.names, digits = c
 
 
 ```{r, out.extra = '', fig.pos = "h", fig.width = 6, fig.height = 4, fig.cap="\\label{fig:qq-plot_interaction}QQ-plot for the integration model"}
-model.plot <- model.both
+model.plot <- model.interaction
 influence.plot <- influence(model.plot)
   
 xb <- predict(model.plot)
@@ -606,6 +602,9 @@ abline(h = c(-2, 0, 2), col = "red", lty = 3)
 
 ```
 
+The interaction has more Person residuals that can be considered suspisiously large than the combined model. Furthermore it has standardized devience residuals that are too large. This questions the of the credability of the interaction model.
+
+
 ```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:cooks_interaction}Cook's distance, for the interaction model, against linear predictor, region as well as higrads"}
 layout(matrix(c(1,1,2,3), 2, 2, byrow = TRUE))
 
@@ -623,11 +622,9 @@ abline(h = c(1, 4 / n), col = "red", lty = 2)
 
 ```
 
-Both models perform better on some metrics, while performing worse on other. The interaction model has a worse AIC-value, but a lower BIC-value (KOMMENTERA). The sensitivity, specificity and Pseudo $R^2$ values are worse for the interaction model.
+Both models perform better on some metrics, while performing worse on other. The interaction model has a worse AIC-value, but a lower BIC-value. The sensitivity, specificity and Pseudo $R^2$ values are worse for the interaction model.The interaction model performs considerably worse than the combined model on the Cook's distance acount. The interaction model have far more outliers and outliers with a much higher Cook's distance. 
 
-NÅGOT OM COOKS MM?
-
-VILKEN ÄR BÄST?
+As aforementioned, the interaction model has several credibility issues with its residuals. Moreover the interaction model has far more outliers that as well have markedly larger Cook's distance than the combined model. The interaction model outperforms the combined model on likelyhood ratio test and bic, however in every other regard the combined model outperforms the interaction model. Thus the combined model was favoured and interaction terms were disregarded.
 
 ## Finding the optimal model
 
@@ -818,7 +815,7 @@ In order to first get a view on the different covariates and how they relate to 
 ggpairs(cdi, columns = c("hicrm", "higrads", "poors", "phys1000", "region"), axisLabels = 'show')
 ```
 
-The optimal model includes the previously studied covariate `region`, but discards the `higrads` covariate. In addition, it includes the new `poors` and `phys1000` covariates. One explaination why `higrads` is not used in the optimal may be seen in figure \ref{fig:pairs}, where there is a high correlation between `higrads` and `poors`. This means that a large part of the correlation between higrads and hicrm is better the effect higrads    
+The optimal model includes the previously studied covariate `region`, but discards the `higrads` covariate. In addition, it includes the new `poors` and `phys1000` covariates. One explaination why `higrads` is not used in the optimal may be seen in figure \ref{fig:pairs}, where there is a high correlation between `higrads` and `poors`. With incresed multicolinearity the standrard error of the coefficents increase. In worst case this can cause some varibles to not be significant. Problems such as these are not to unlikley to happen when ivolving both the `region` and `higrads` covariates, which have a correlation of -0.692 bewteen them.
 
 This hypothesis is tested in figure \ref{fig:poors_higrads}, where a linear regression model has been fit. Studying the P-value of the model reveals that the $\beta$-values are highly significant.
 ```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 4, fig.cap="\\label{fig:poors_higrads}Plot of \\texttt{higrads} against \\texttt{poors}, together with linear regression line, with 95 % confidence and prediction intervals"}
