@@ -533,12 +533,8 @@ abline(h = c(1, 4 / n), col = "red", lty = 2)
 
 ```
 
-As can be seen in diagrams XX, XX, XX the vast majoriy of the the observations is below the horizontal line. The amount of counties with a high Cook's distance is limited to 3-4. The data entry with the largest Cook's distance is found in the South region while the rest of the counties with a high Cook's distance is found in the West region. 
+As can be seen in diagrams XX, XX, XX the vast majoriy of the the observations is below the horizontal line. The amount of counties with a high Cook's distance is limited to 3-4. The data entry with the largest Cook's distance is found in the South region while the rest of the counties with a high Cook's distance is found in the West region. The Cook's distance daigrams give no concern to why the combined model should be amiss.
 
-
-
-Anything alarmin?
-Any interesting finds?
 
 ## Interaction model
 ### Introduction
@@ -779,7 +775,7 @@ temp.data <- subset(cdi, select = c(hicrm, higrads, region, poors, phys1000))
 ggpairs(temp.data)
 ```
 
-The optimal model includes the previously studied covariate `region`, but discards the `higrads` covariate. In addition, it includes the new `poors` and `phys1000` covariates. One explaination why `higrads` is not used in the optimal may be seen in figure \ref{fig:pairs}, where there is a high correlation between `higrads` and `poors`. This means that a large part of the correlation between higrads and hicrm is better the effect higrads    
+The optimal model includes the previously studied covariate `region`, but discards the `higrads` covariate. In addition, it includes the new `poors` and `phys1000` covariates. One explaination why `higrads` is not used in the optimal may be seen in figure \ref{fig:pairs}, where there is a high correlation between `higrads` and `poors`. With incresed multicolinearity the standrard error of the coefficents increase. In worst case this can cause some varibles to not be significant. Problems such as these are not to unlikley to happen when ivolving both the `region` and `higrads` covariates, which have a correlation of -0.692 bewteen them.
 
 This hypothesis is tested in figure \ref{fig:poors_higrads}, where a linear regression model has been fit. Studying the P-value of the model reveals that the $\beta$-values are highly significant.
 ```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 4, fig.cap="\\label{fig:poors_higrads}Plot of \\texttt{higrads} against \\texttt{poors}, together with linear regression line, with 95 % confidence and prediction intervals"}
