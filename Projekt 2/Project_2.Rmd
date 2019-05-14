@@ -41,6 +41,7 @@ library(knitr)
 library(dplyr)
 library(purrr)
 library(pscl)
+library(GGally)
 
 cdi <- read.delim("CDI.txt")
  
@@ -63,7 +64,7 @@ cdi <- cbind(cdi, hicrm = ifelse(cdi$crm1000 < median, 0, 1))
 # Introduction
 
 ## Background and dataset
-The objective of this report was to determine which covarites that can be used to predict if a US county has a low or high crime rate (per 1000 inhabitants). Data used to do this was county demographic information (CDI) for 440 of the most populous counites in the US 1990-1992. The record for each county includes data on the 14 variables listed below in table \ref{tab:cdi}. Counties with missing data has been removed from the dataset.
+The objective of this report is to determine which covarites that can be used to predict if a US county has a low or high crime rate (per 1000 inhabitants). The dataset used to do this was county demographic information (CDI) for 440 of the most populous counites in the US 1990-1992. Each county records includes data on the 14 variables listed below in table \ref{tab:cdi}. Counties with missing data has been removed from the dataset.
 
 
 ```{r}
@@ -74,16 +75,15 @@ descriptions = c("identification number, 1–440", "county name", "state abbrevi
 
 variable.table = cbind(variables, descriptions)
 
-kable(variable.table, caption = "\\label{tab:cd}iCDI dataset columns", col.names = c("Variable", "Description"))
+kable(variable.table, caption = "\\label{tab:cdi}CDI dataset columns", col.names = c("Variable", "Description"))
 ```
 
-In order to measure crime rate, another varible called `crm1000` was added to the data set, descibing the number of serious crimes per 1000 inhabitants. Same thing with `phys`, with `phys1000`. Using `crm1000`, counties were divided into counties with high or non-high crime rate, using the median of `crm1000`, where counties with crime rate higher than the median were categorized as having a high crime rate. This crime status of the county was stored in another column called `hircrm`, which takes the value 1 if the county is a high crime county and zero if it is a low crime county. In this paper, this binary varible will be used as the dependent varible. This binary dependent value was then modelled using \textbf{logistic regression}.
-
+In order to measure crime rate, another varible called `crm1000` was added to the data set, descibing the number of serious crimes per 1000 inhabitants. Using `crm1000`, counties were divided into counties with high or non-high crime rate, where counties with crime rate higher than the median of `crm1000` in the dataset were categorized as having a high crime rate. This crime status of the county was stored in another column called `hircrm`, which takes the value 1 if the county is a high crime county and zero if it is a low crime county. In this paper, this binary varible will be used as the dependent varible. Similar to crime rate, a covariate `phys1000` was also added, measuring the number of physicians per 1000 inhabitants.
 
 ## Model
-The logistic regression model used, models the log-odds of a certain observation $i$ as a linear combination of its covariates $X_{j,i}$ and parameters $\beta_i$, with together with an additive error $\epsilon_i$. These error terms are assumed to follow a normal distribution and be indipendent, i.e. $\epsilon \sim N(0, \sigma)$ i.i.d. 
+The binary dependent variable was modelled using a logistic regression model. This model assumes that the log-odds of a certain observation $i$ is a linear combination of its covariates $X_{j,i}$ and parameters $\beta_i$. As such, the model looks like:
 \begin{equation}
-  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \sum_j\beta_{j} \cdot X_{j,i} + \epsilon_i
+  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \sum_j\beta_{j} \cdot X_{j,i}
 \end{equation}
 
 # Analysis
@@ -206,10 +206,6 @@ kable(predx, col.names = c("Higrads", "Probability (%)", "2.5 %", "97.5 %"), cap
 
 ### Model performance analysis
 
-In order to analyze model performance, the sensitivity and specificity of the model was calculated. The sensitivity of a model is the ratio of predicted positives to real positives in the dataset, while the specificity of a model is the ratio of predicted negatives to real negatives in the dataset. As such, the higher the value of the sensitivity and specificity, the better.
-
-The sensitivity of the model was 55.5% and specificity of the model was 57.3%. Thereby the higrad model does a rather bad job at correctly clasifying the the crime level status of the counties
-
 ```{r pred_sense_spec, include = F}
 
 calc.sense.spec = function(model) {
@@ -245,6 +241,9 @@ specificity.higrads <- sense.spec.higrads$specificity
 
 ```
 
+In order to analyze model performance, the sensitivity and specificity of the model was calculated. The sensitivity of a model is the ratio of predicted positives to real positives in the dataset, while the specificity of a model is the ratio of predicted negatives to real negatives in the dataset. As such, the higher the value of the sensitivity and specificity, the better.
+
+The sensitivity of the model was `display.percent(sensitivity.higrads)`% and `display.percent(specificity.higrads)` of the model was 57.3%. Thereby the higrad model does a rather bad job at correctly clasifying the the crime level status of the counties
 
 ## The region model
 
@@ -516,7 +515,7 @@ with(cdi, plot(ds ~ xb, ylab = "Deviance residuals", main = "Standardized devian
 abline(h = c(-2, 0, 2), col = "red", lty = 3)
 
 ```
-For a standardized pearson residual to be considered suspiciously large, $|r_i| > |\lambda_{\alpha/2}| ≈ 2$. This is true for 8 of the standadized pearson residuals, which can be seen in figures XX and XX, where the standardized pearson residuals are plotted against the linear predictor. For a deviance residual to be considered to large $|r_i| > 2 $. This is never the case which is verified by figure XX where the standardized devience residuals are plotted against the linear predictor. 
+For a standardized pearson residual to be considered suspiciously large, $|r_i| > |\lambda_{\alpha/2}| \approx 2$. This is true for 8 of the standadized pearson residuals, which can be seen in figures XX and XX, where the standardized pearson residuals are plotted against the linear predictor. For a deviance residual to be considered to large $|r_i| > 2 $. This is never the case which is verified by figure XX where the standardized devience residuals are plotted against the linear predictor. 
 
 In order to measure how the $\beta$-estimates were influenced by indiviual observations Cook's distance for logistic regression was calcultaed and plotted. 
 
@@ -770,18 +769,61 @@ abline(h = c(1, 4 / n), col = "red", lty = 2)
 
 ```
 
-```{r}
-outlier <- cdi[which(cook.plot > 0.4),]
+```{r, include = F}
+outlier.index <- which(cook.plot > 0.4)
+outlier <- cdi[outlier.index,]
+outlier
 ```
 
-The outlier is `r outlier$county`
+The outlier is `r outlier$county`, see figure \ref{fig:cooks_optimal_corrected} for a plot of Cook's distance excluding this point. Table \ref{tab:comparison_optimal_corrected} compares the performance of these models.
+
+```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:cooks_optimal_corrected}Cook's distance, for the optimal model, against linear predictor, region as well as higrads, excluding outlier Olmsted"}
+
+cdi.corrected <- cdi[-c(outlier.index),]
+model.optimal.corrected <- glm(hicrm ~ region + poors + phys1000, data = cdi.corrected, family = "binomial")
+xb <- predict(model.optimal.corrected)
+
+par(mfrow = c(2, 2))
+
+n <- nrow(cdi)
+cook.plot <- cooks.distance(model.optimal.corrected)
+
+with(cdi.corrected, plot(cook.plot ~ xb, ylab = "Cook's distance", main = "Cook's distance against linear predictor"))
+abline(h = c(1, 4 / n), col = "red", lty = 2)
+
+with(cdi.corrected, plot(cook.plot ~ region, ylab = "Cook's distance", main = "Cook's distance against region"))
+abline(h = c(1, 4 / n), col = "red", lty = 2)
+
+with(cdi.corrected, plot(cook.plot ~ poors, ylab = "Cook's distance", main = "Cook's distance against region"))
+abline(h = c(1, 4 / n), col = "red", lty = 2)
+
+with(cdi.corrected, plot(cook.plot ~ phys1000, ylab = "Cook's distance", main = "Cook's distance against higrads"))
+abline(h = c(1, 4 / n), col = "red", lty = 2)
+
+```
+
+```{r}
+model.names <- c("Optimal", "Optimal without outlier")
+models <- list(model.optimal, model.optimal.corrected)
+
+compare.models <- calc.metrics.models(models, model.names)
+
+compare.models$sensitivity <- compare.models$sensitivity * 100
+compare.models$specificity <- compare.models$specificity * 100
+
+col.names <- c("Model", "AIC", "BIC", "Sensitivity (%)", "Specificity (%)", "Pseudo R2")
+table.caption <- "\\label{tab:comparison_optimal_corrected}Comparison of sensitivity and specificity of optimal model v.s. optimal model with outlier Olmsted removed"
+kable(compare.models, caption = table.caption, col.names = col.names, digits = c(rep(0, 5), 2))
+```
+
+The model with the outlier removed performs better.
 
 ### Discussion
 
 In order to first get a view on the different covariates and how they relate to each other, they are plotted against eachother in figure \ref{fig:pairs}.
 
-```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:pairs}Plot of covariates against eachother"}
-pairs(~ hicrm + higrads + region + poors + phys1000, data = cdi)
+```{r, out.extra = '', fig.pos = "h", fig.width = 12, fig.height = 12, fig.cap="\\label{fig:pairs}Plot of covariates against eachother"}
+ggpairs(cdi, columns = c("hicrm", "higrads", "poors", "phys1000", "region"), axisLabels = 'show')
 ```
 
 The optimal model includes the previously studied covariate `region`, but discards the `higrads` covariate. In addition, it includes the new `poors` and `phys1000` covariates. One explaination why `higrads` is not used in the optimal may be seen in figure \ref{fig:pairs}, where there seems to be a high correlation between `higrads` and `poors`.
@@ -823,7 +865,7 @@ with(cdi, {
 })
 
 model.poors <- glm(hicrm ~ poors, data = cdi, family = "binomial")
-summary(model.poors)
+#summary(model.poors)
 
 x0 <- data.frame(poors = seq(0, 40, 1))
 
@@ -855,7 +897,7 @@ with(cdi, {
 })
 
 model.phys1000 <- glm(hicrm ~ phys1000, data = cdi, family = "binomial")
-summary(model.phys1000)
+#summary(model.phys1000)
 
 x0 <- data.frame(phys1000 = seq(0, 40, 1))
 
