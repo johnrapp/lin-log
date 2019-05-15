@@ -1,7 +1,7 @@
 ---
 title: "Project 2"
-author: "Axel Sjöberg & John Rapp Farnes"
-date: "14 maj 2019"
+author: "Axel Sjöberg (ax3817sj-s) & John Rapp Farnes (jo5113fa-s)"
+date: "16 maj 2019"
 output:
   pdf_document:
     fig_caption: yes
@@ -78,13 +78,14 @@ variable.table = cbind(variables, descriptions)
 kable(variable.table, caption = "\\label{tab:cdi}CDI dataset columns", col.names = c("Variable", "Description"))
 ```
 
-In order to measure crime rate, another varible called `crm1000` was added, descibing the number of serious crimes per 1000 inhabitants. Using `crm1000`, counties were divided into counties with high or non-high crime rate, where counties with crime rate higher than the median of `crm1000` in the dataset, were categorized as having a high crime rate. This crime status of the county was stored in another column called `hicrm`, which takes the value 1 if the county was a high crime county and 0 if it was a low crime county. In this paper, `hicrm` is used as the dependent varible. Similar to crime rate, a variable `phys1000` was also added, measuring the number of physicians per 1000 inhabitants.
+In order to measure crime rate, another varible called `crm1000` was added, descibing the number of serious crimes per 1000 inhabitants. Using `crm1000`, counties were divided into counties with high or non-high crime rate, where counties with crime rate higher than the median of `crm1000` in the dataset were categorized as having a high crime rate. This crime status of the county was stored in another column called `hicrm`, which takes the value 1 if the county was a high crime county and 0 if it was a low crime county. In this paper, `hicrm` is used as the dependent varible. Similar to crime rate, a variable `phys1000` was also added, measuring the number of physicians per 1000 inhabitants.
 
 ## Model
-The binary dependent variable was modelled using a logistic regression model. This model assumes that the log-odds of a certain observation $i$ is a linear combination of its covariates $X_{j,i}$ and parameters $\beta_i$. As such, the model looks like:
+The binary dependent variable was modelled using a logistic regression model. This model assumes that the log-odds of a certain observation $i$ is a linear combination of its covariates $X_{j,i}$ and parameters $\beta_i$, as well as errors $\epsilon_i$. As such, the model looks like:
 \begin{equation}
-  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \sum_j\beta_{j} \cdot X_{j,i}
+  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \sum_j\beta_{j} \cdot X_{j,i} + \epsilon_i
 \end{equation}
+In contrast to linear regression, the error terms $\epsilon_i$ are not assumed to have any particular distribution.
 
 # Analysis
 
@@ -92,14 +93,14 @@ The binary dependent variable was modelled using a logistic regression model. Th
 
 ### Introduction
 
-The first model considered had `higrads` as the sole covariate. As such, the model became:
+The first model considered has `higrads` as the sole covariate. As such, the model becomes:
 
 \begin{equation}
-  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \beta_{higrads} \cdot X_{higrads,i}
+  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \beta_{higrads} \cdot X_{higrads,i} + \epsilon_i
 \end{equation}
 
 
-In order to determine if there was a relationship between `hicrm` and `higrads` they were plotted against each other. Because `hicrm` is a binary varible it was very difficult to determine if a relationship exists by the looking at the pattern in the plot. In order to clarify this relationship, a kernel smoother was added to the plot, where a smooth line was attained with a bandwidth of 20. In addition, the fitted model along with its 95 % confidence interval were included. Figure 1 shows the attained plot described above.
+In order to determine if there is a relationship between `hicrm` and `higrads` they were plotted against each other. Because `hicrm` is a binary varible it was very difficult to determine if a relationship exists only by the looking at the pattern in the plot. In order to clarify this relationship, a kernel smoother was added to the plot, where a smooth line was attained with a bandwidth of 20. In addition, the fitted model along with its 95 % confidence interval were included. Figure 1 shows the attained plot described above.
 
 
 ```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 5, fig.cap="\\label{fig:hicrm_higrads}Plot of \\texttt{hicrm} against \\texttt{higrads}, including kernel smoothing and prediction of fitted model with 95 \\% confidence interval"}
@@ -137,7 +138,7 @@ with(predx, {
 })
 
 ```
-As seen in figure \ref{fig:hicrm_higrads}, the kernel curve looks S-shaped, implying that a logistic model may be appropriate to describe the relationship. Further, the S-shape is "downward facing", implying a negative $\beta_{higrads}$, i.e. that the probability of a county being classified as a high crime decreases when the amount of higrads in the county increases. Another thing to note in figure \ref{fig:hicrm_higrads} is how few data points exists with `higrads` below 60, meaning that significance is low in this region. In addition, looking at points with `higrads` over 60, the kernel curve and fitted line only cover about 25% - 75%, implying that `higrads` may not predict `hicrm` well.
+As seen in figure \ref{fig:hicrm_higrads}, the kernel curve looks S-shaped, implying that a logistic model may be appropriate to describe the relationship. Further, the S-shape is "downward facing", implying a negative $\beta_{higrads}$, meaning that the probability of a county being classified as a high crime decreases when the amount of higrads in the county increases. Another thing to note in figure \ref{fig:hicrm_higrads} is how few data points exists with `higrads` below 60, meaning that significance is low in this region. In addition, looking at points with `higrads` over 60, the kernel curve and fitted line only cover about 30% - 70%, implying that `higrads` alone may not predict `hicrm` well.
 
 
 ### Fitted model and significance
@@ -176,7 +177,7 @@ decrease.ten.percent
 ```
 
 
-As seen in the table 2, all of the P-values are > 0.05, meaning that that `higrads` has a statistically significant effect on `hicrm`. This effect can be measured by looking at $e^{\beta_{higrads}}$, showing that an increase of 1% in `higrads` decreases odds of `hicrm` by `r display.percent(decrease.one.percent)`%, while an increase of 10% decreases odds of by `r display.percent(decrease.ten.percent)`%.
+As seen in the table 2, all of the P-values are < 0.05, meaning both that conties with no `higrads` has greater than 0 probability of having a high crime rate, and that `higrads` has a statistically significant effect on `hicrm`. This effect can be measured by looking at $e^{\beta_{higrads}}$, showing that an increase of 1% in `higrads` decreases odds of `hicrm` by `r display.percent(decrease.one.percent)`%, while an increase of 10% decreases odds of by `r display.percent(decrease.ten.percent)`%.
 
 ### Model predictions
 
@@ -201,6 +202,8 @@ predx <- cbind(predx$higrads, predx$prob * 100, to.prob(ci.odds) * 100)
 table.caption <- "\\label{tab:higrads_predictions}Predictions of `higrads` model"
 kable(predx, caption = table.caption, col.names = c("Higrads", "Probability (%)", "2.5 %", "97.5 %"), digits = 1)
 ```
+
+Looking at table \ref{tab:higrads_predictions}, one can see that a county with 65 % high education graduates has greater than 50% probability of having a high crime rate, while a county with 85 % high education graduates has less than 50% probability of having a high crime rate. Further, these results are also statistically significant.
 
 ### Model performance analysis
 
@@ -241,7 +244,7 @@ specificity.higrads <- sense.spec.higrads$specificity
 
 In order to analyze model performance, the sensitivity and specificity of the model were calculated. The sensitivity of a model is the ratio of predicted positives to real positives in the dataset, while the specificity of a model is the ratio of predicted negatives to real negatives in the dataset. As such, the higher the value of the sensitivity and specificity, the better.
 
-The sensitivity of the model was `r display.percent(sensitivity.higrads)`% and the specificity of the model was `r display.percent(specificity.higrads)`%, implying that the model does not clasify the crime rate of the counties rather successfully.
+The sensitivity of the model was `r display.percent(sensitivity.higrads)`% and the specificity of the model was `r display.percent(specificity.higrads)`%, indicating that the model does not clasify the crime rate of the counties rather successfully.
 
 ## The region model
 
@@ -250,6 +253,8 @@ The sensitivity of the model was `r display.percent(sensitivity.higrads)`% and t
 Next, a logistic model was adopted based on the `region` covariate. Since `region` is not continous, but categorial, it was modelled using "dummy variables" $X_i$. In order to implement this effectively, one of the categories is chosen as a reference category, and the effects of the other categories are measured in comparison to it.
 
 In order to determine which region to use as reference category, a cross-tabulation of the data between `region` and `hirm` had to be studied, see table \ref{tab:cross-tabulation}.
+
+\newpage
 
 ```{r cross_tabulation}
 
@@ -268,10 +273,10 @@ As a reference region, the one that has the largest number of counties in it’s
 
 Using this reference region, the logistic model became
 \begin{equation}
-  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \beta_{Northeast} \cdot X_{Northeast,i} + \beta_{Midwest} \cdot X_{Midwest,i} + \beta_{West} \cdot X_{West,i}
+  \ln{\frac{p_i}{1 - p_i}} = \beta_0 + \beta_{Northeast} \cdot X_{Northeast,i} + \beta_{Midwest} \cdot X_{Midwest,i} + \beta_{West} \cdot X_{West,i} + \epsilon_i
 \end{equation}
 
-Here, the $\beta$ coefficients were measured relative to `r reference.level`, while $\beta_0$ was the log-odds coefficient for `r reference.level`.
+Here, the $\beta$ coefficients are measured relative to `r reference.level`, while $\beta_0$ was the log-odds coefficient for `r reference.level`.
 
 ### Fitted model and significance
 
@@ -294,7 +299,7 @@ table.caption <- "\\label{tab:region_beta}$\\beta$-estimates for the \\texttt{re
 kable(table.beta.ci, caption = table.caption, digits = c(rep(2,3), 3))
 ```
 
-As may be seen in table \ref{tab:region_beta}, the P-value for $\beta_{West}$ was not less than 0.05, indicating a lack of statistical significance in the difference between how South and West predicts `hivrm`.
+As may be seen in table \ref{tab:region_beta}, the P-value for $\beta_{West}$ was > 0.05, indicating a lack of statistical significance in the difference between how South and West predicts `hicrm`.
 
 Next, the odds-ratios for the different categories were determined. The odds-ratios measure the odds of a particular category in relation to the reference category. These may be calculated as $OR_i = e^{\beta_i}$ and are presented in table \ref{tab:region_OR}.
 
@@ -313,7 +318,7 @@ kable(table.beta.ci, caption = table.caption, digits = 2)
 
 ```
 
-As seen in table \ref{tab:region_OR}, the odds-ratios were less than 1 for all categories but the reference region. This implies that the odds for all regions are lower compared to the reference region, i.e. that the probability of a high crime rate is lower in all regions compared to the reference region. This is however not statistically significant as the confidence interval for the western region's odds ratio, in relation to the refernce category, cover 1. This coincides with the findings in table  \ref{tab:region_beta} where the $\beta_{West}$ P-value had a value higher than 0.05. 
+As seen in table \ref{tab:region_OR}, the odds-ratios were less than 1 for all categories but the reference region. This implies that the odds for all regions are lower compared to the reference region, i.e. that the probability of a high crime rate is lower in all regions compared to the reference region. This is however not statistically significant as the confidence interval for the western region's odds ratio, in relation to the refernce category, cover 1. This coincides with the findings in table  \ref{tab:region_beta} where the $\beta_{West}$ P-value was > 0.05. 
 
 
 
@@ -358,10 +363,7 @@ specificity.region <- sense.spec.region$specificity
 
 ```
 
-For the `region` model, the sensitivity was `r display.percent(sensitivity.region)`%, while the specificity was `r display.percent(specificity.region)`%.
-
-
-Comparing the two models analyzed so far, the `region` model performs better measured on sensitivity and specificity, as seen in table \ref{tab:compare_sense_spec_region_higrad}
+For the `region` model, the sensitivity was `r display.percent(sensitivity.region)`%, while the specificity was `r display.percent(specificity.region)`%. Comparing the two models analyzed so far, the `region` model performs better measured on sensitivity and specificity, as seen in table \ref{tab:compare_sense_spec_region_higrad}
 
 ```{r}
 
@@ -472,9 +474,9 @@ As seen in figure \ref{fig:comparison_region_higrads_both} and table \ref{tab:co
 
 \newpage
 
-### Combined model performance
+### Combined model analysis
 
-Performance of the combined model were analyzed by studying the QQ-plot (see figure \ref{fig:qq-plot_combined}) the squared standardized Pearson residuals and the standardized deviance residuals against the linear predictor $x^{\beta}$ (see figure \ref{fig:residuals_combined}). Furthermore the Cook’s distance against the linear predictor, `higrads` and against `region` was plotted and analyzed respectively. (see figure \ref{fig:cooks_combined}).
+The combined model was further analyzed by studying the QQ-plot (see figure \ref{fig:qq-plot_combined}), the squared standardized Pearson residuals and the standardized deviance residuals against the linear predictor $X\beta$ (see figure \ref{fig:residuals_combined}). Furthermore the Cook’s distance was plotted against the linear predictor, `higrads` and against `region` was plotted (see figure \ref{fig:cooks_combined}).
 
 
 ```{r, out.extra = '', fig.pos = "h", fig.width = 6, fig.height = 4, fig.cap="\\label{fig:qq-plot_combined}QQ-plot for the combined model"}
@@ -493,15 +495,12 @@ qqline(r)
 
 \newpage
 
-From the QQ-plot it looks like the model had a bimodal distribution rather than a normal distribution. 
+From the QQ-plot it looks like the model residuals follow a bimodal distribution rather than a normal distribution. 
 
-
-
-```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:residuals_combined}Squared standardized Pearson residuals as well as standardized deviance residuals for the combined model, against the linear predictor $x^{\\beta}$"}
+```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:residuals_combined}Standardized Pearson residuals as well as standardized deviance residuals for the combined model, against the linear predictor $X\\beta$"}
 par(mfrow = c(3, 1))
 
-
-with(cdi, plot(r ~ xb, ylab = "Squared Pearson residuals", main = "Squared standardized Pearson residuals against linear predictor"))
+with(cdi, plot(r ~ xb, ylab = "Squared Pearson residuals", main = "Standardized Pearson residuals against linear predictor"))
 abline(h = c(-2, 0, 2), col = "red", lty = 3)
 
 with(cdi, plot(r^2 ~ xb, ylab = "Squared Pearson residuals", main = "Squared standardized Pearson residuals against linear predictor"))
@@ -511,9 +510,6 @@ with(cdi, plot(ds ~ xb, ylab = "Deviance residuals", main = "Standardized devian
 abline(h = c(-2, 0, 2), col = "red", lty = 3)
 
 ```
-
-
-\newpage
 
 
 For a standardized pearson residual to be considered suspiciously large, $|r_i| > |\lambda_{\alpha/2}| \approx 2$. This was true for 8 of the standadized pearson residuals, which can be seen in figure \ref{fig:residuals_combined}, where the standardized pearson residuals were plotted against the linear predictor. For a deviance residual to be considered too large $|r_i| > 2$. This was never the case which is verified by figure \ref{fig:residuals_combined} where the standardized devience residuals were plotted against the linear predictor. 
@@ -551,7 +547,7 @@ As can be seen in figure \ref{fig:cooks_combined} the vast majoriy of the the ob
 As a forth model, interaction terms were also considered, building in that the effect of higrads may be different in different regions, where the log-odds in the model includes interaction terms such as $\beta_{Northeast * higrads} \cdot X_{higrads,i}$.
 
 
-### Model performance
+### Model analysis
 
 ```{r, include = F}
 model.interaction <- glm(hicrm ~ higrads * region, data = cdi, family = "binomial")
@@ -565,7 +561,7 @@ likelihood.p_value <- anova.combined.interaction$`Pr(>Chi)`[2]
 
 The performance of the interaction model compared to the combined model was analyzed by the likelihood test. This test is similar to a partial F-test, but adapted for logistical regression, using likelihoods since sums of squares are not applicable. The likelihood test resulted in the interaction model being significantly better than the combined model, with a P-value of `r round(likelihood.p_value, 3)`.
 
-In addition, the AIC, BIC, Nagelkerke, sensitivity and specificity was compared to the combined model, in table \ref{tab:compare_sense_spec_interaction}. Performance of the interaction model was analyzed by studying a QQ-plot (see figure \ref{fig:qq-plot_interaction}) the squared standardized Pearson residuals and the standardized deviance residuals against the linear predictor $x^{\beta}$ (see figure \ref{fig:residuals_interaction}). Furthermore the Cook’s distance against the linear predictor, `higrads` and against `region` was plotted and analyzed respectively. (see figure \ref{fig:cooks_interaction}).
+In addition, the AIC, BIC, Nagelkerke, sensitivity and specificity was compared to the combined model, in table \ref{tab:compare_sense_spec_interaction}. The interaction model was analyzed by studying a QQ-plot (see figure \ref{fig:qq-plot_interaction}) the squared standardized Pearson residuals and the standardized deviance residuals against the linear predictor $X^\beta$ (see figure \ref{fig:residuals_interaction}). Furthermore the Cook’s distance was plotted against the linear predictor, `higrads` and against `region` (see figure \ref{fig:cooks_interaction}).
 
 
 ```{r}
@@ -581,7 +577,6 @@ compare.models$specificity <- compare.models$specificity * 100
 col.names <- c("Covariate", "AIC", "BIC", "Sensitivity (%)", "Specificity (%)", "Pseudo R2")
 table.caption <- "\\label{tab:compare_sense_spec_interaction}Comparison of sensitivity and specificity of models"
 kable(compare.models, caption = table.caption, col.names = col.names, digits = c(rep(0, 5), 2))
-
 
 ```
 
@@ -604,18 +599,20 @@ qqline(r)
 \newpage
 
 
-```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:residuals_interaction}Squared standardized Pearson residuals as well as standardized deviance residuals for the interaction model, against the linear predictor $x^{\\beta}$"}
-par(mfrow = c(2, 1))
+```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:residuals_interaction}Standardized Pearson residuals as well as standardized deviance residuals for the interaction model, against the linear predictor $X\\beta$"}
+par(mfrow = c(3, 1))
+
+with(cdi, plot(r ~ xb, ylab = "Squared Pearson residuals", main = "Standardized Pearson residuals against linear predictor"))
+abline(h = c(-2, 0, 2), col = "red", lty = 3)
 
 with(cdi, plot(r^2 ~ xb, ylab = "Squared Pearson residuals", main = "Squared standardized Pearson residuals against linear predictor"))
-abline(h = c(-2, 0, 2), col = "red", lty = 3)
+abline(h = c(0, 4), col = "red", lty = 3)
 
 with(cdi, plot(ds ~ xb, ylab = "Deviance residuals", main = "Standardized deviance residuals against linear predictor"))
 abline(h = c(-2, 0, 2), col = "red", lty = 3)
-
 ```
 
-The interaction had more Person residuals that can be considered suspisiously large than the combined model. Unlike the combined model it also had standardized devience residuals that are too large. 
+The interaction had more Person residuals that may be considered suspisiously large than the combined model. Unlike the combined model it also had standardized devience residuals that are too large. 
 
 
 \newpage
@@ -637,15 +634,15 @@ with(cdi, plot(cook.plot ~ higrads, ylab = "Cook's distance", main = "Cook's dis
 abline(h = c(1, 4 / n), col = "red", lty = 2)
 
 ```
-Both the interaction and the combined model performed better on some metrics, while performing worse on other. The interaction model had a lower AIC value but at the same time higher BIC-value. This is not too extraordinary since BIC penalizes larger models more than the AIC value tends to do. The sensitivity, specificity and Pseudo $R^2$ values were worse for the Combined model. The interaction model performed considerably worse than the combined model on the Cook's distance acount. The interaction model had far more outliers and outliers with a much higher Cook's distance. 
+Both the interaction and the combined model performed better on some metrics, while performing worse on other. The interaction model had a lower AIC value but at the same time higher BIC-value. This is expected since BIC penalizes larger models more than the AIC value tends to do. The sensitivity, specificity and Pseudo $R^2$ values were worse for the Combined model. The interaction model performed considerably worse than the combined model on the Cook's distance acount. The interaction model had far more outliers and outliers with a much higher Cook's distance. 
 
-As aforementioned, the interaction model had some credibility issues with its residuals. Moreover the interaction model had far more outliers that as well had markedly larger Cook's distance than the combined model. At the same time the interaction model outperformed the combined model on likelyhood ratio test, AIC, Sensitivity, Specificity and Pseudo R2. The outliers in the interaction model might therefor not effect the Interaction model to much. In the end, the interaction model was favoured over the combined model.
+As aforementioned, the interaction model had some credibility issues with its residuals. Moreover the interaction model had far more outliers as well as considerably larger Cook's distance than the combined model. At the same time the interaction model outperformed the combined model on likelyhood ratio test, AIC, Sensitivity, Specificity and Pseudo R2. The outliers in the interaction model might therefor not effect the Interaction model to much. In the end, the interaction model is favoured over the combined model.
 
 ## Finding the optimal model
 
 ### Methology
 
-Next, an attempt to fit an optimal model to predict high crime rates was made, using the previous covariates, as well as `poors` and `pshys1000`. Finding the optimal model, interaction terms were disregarded.
+Next, an attempt to fit an optimal model to predict high crime rates was made, using the previous covariates, as well as `poors` and `pshys1000`. When searching for an optimal model, interaction terms were disregarded.
 
 Models of increasing complexity were constructed by adding more covariates. These were then compared to each other on the used metrics, i.e. AIC, BIC, Pseudo $R^2$, sensitivity and specificity. In addition, the result of automatic selection using R `step` function was studied.
 
@@ -720,9 +717,9 @@ model.optimal <- model.5
 ```
 
 
-### Model performance
+### Optimal model analysis
 
-Performance of the optimal was then analyzed by studying a QQ-plot (see figure \ref{fig:qq-plot_optimal}) the squared standardized Pearson residuals and the standardized deviance residuals against the linear predictor $x^{\beta}$ (see figure \ref{fig:residuals_optimal}). Furthermore the Cook’s distance against the linear predictor, `higrads` and against `region` was plotted and analyzed respectivley. (see figure \ref{fig:cooks_optimal}).
+The optimal model was then analyzed by studying a QQ-plot (see figure \ref{fig:qq-plot_optimal}) the squared standardized Pearson residuals and the standardized deviance residuals against the linear predictor $X\beta$ (see figure \ref{fig:residuals_optimal}). Furthermore the Cook’s distance was plotted against the linear predictor, `higrads` and against `region` (see figure \ref{fig:cooks_optimal}).
 
 
 ```{r, out.extra = '', fig.pos = "h", fig.width = 6, fig.height = 4, fig.cap="\\label{fig:qq-plot_optimal}QQ-plot for the optimal model"}
@@ -738,17 +735,20 @@ qqnorm(r)
 qqline(r)
 
 ```
-The QQ plot of the optimal model seem to follow a normal distribution skewed to the left.
+The QQ plot of the optimal model appear to follow a normal distribution, however skewed to the left.
 
 
 
 \newpage
 
-```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:residuals_optimal}Squared standardized Pearson residuals as well as standardized deviance residuals for the optimal model, against the linear predictor $x^{\\beta}$"}
-par(mfrow = c(2, 1))
+```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:residuals_optimal}Standardized Pearson residuals as well as standardized deviance residuals for the optimal model, against the linear predictor $X\\beta$"}
+par(mfrow = c(3, 1))
+
+with(cdi, plot(r ~ xb, ylab = "Squared Pearson residuals", main = "Standardized Pearson residuals against linear predictor"))
+abline(h = c(-2, 0, 2), col = "red", lty = 3)
 
 with(cdi, plot(r^2 ~ xb, ylab = "Squared Pearson residuals", main = "Squared standardized Pearson residuals against linear predictor"))
-abline(h = c(-2, 0, 2), col = "red", lty = 3)
+abline(h = c(0, 4), col = "red", lty = 3)
 
 with(cdi, plot(ds ~ xb, ylab = "Deviance residuals", main = "Standardized deviance residuals against linear predictor"))
 abline(h = c(-2, 0, 2), col = "red", lty = 3)
@@ -760,10 +760,7 @@ outlier2 <- cdi[outlier.index2,]
 ```
 There was one particular outlier that seem to generate an exceptionaly large Pearson residual. Furthermore there were a few Pearson Resdiuals that had a suspisiously large value. As for the devience residuals, some of them were too large as well. Disregarding the most extreme outlier, the residuals were not far worse off than the residuals of the interaction model. The most extreme outlier was the Olmsted county. The potential influence of individual observations was adressed by plotting the Cook's disatance, see figure \ref{fig:cooks_optimal}.   
 
-
-
 \newpage
-
 
 ```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:cooks_optimal}Cook's distance, for the optimal model, against linear predictor, region as well as higrads"}
 par(mfrow = c(2, 2))
@@ -791,7 +788,7 @@ outlier <- cdi[outlier.index,]
 outlier
 ```
 
-The outlier was `r outlier$county`, see figure \ref{fig:cooks_optimal_corrected} for plots of Cook's distance excluding this point. Olmsted is the same county that genrated the extreme residuals in figure \ref{fig:residuals_optimal}. Table \ref{tab:comparison_optimal_corrected} compares the performance of these models.
+The outlier in figure \ref{fig:cooks_optimal} was again `r outlier$county`, see figure \ref{fig:cooks_optimal_corrected} for plots of Cook's distance excluding this point. Table \ref{tab:comparison_optimal_corrected} compares the performance of these models.
 
 
 \newpage
@@ -825,7 +822,7 @@ Removing the problematic data entry from the CDI data frame, and refitting the o
 
 
 ```{r}
-model.names <- c("Optimal", "Optimal without outlier")
+model.names <- c("Optimal", "Optimal excluding outlier")
 models <- list(model.optimal, model.optimal.corrected)
 
 compare.models <- calc.metrics.models(models, model.names)
@@ -838,25 +835,19 @@ table.caption <- "\\label{tab:comparison_optimal_corrected}Comparison of sensiti
 kable(compare.models, caption = table.caption, col.names = col.names, digits = c(rep(0, 5), 2))
 ```
 
-The model with the outlier removed performed better.
-
-
-
-
-
-
+The model with the outlier removed performed even better.
 
 ### Discussion
 
 In order to first get a view on the different covariates and how they relate to each other, they were plotted against eachother in figure \ref{fig:pairs}.
 
 ```{r, out.extra = '', fig.pos = "h", fig.width = 12, fig.height = 12, fig.cap="\\label{fig:pairs}Plot of covariates against eachother"}
-ggpairs(cdi, columns = c("hicrm", "higrads", "poors", "phys1000", "region"), axisLabels = 'show')
+ggpairs(cdi, columns = c("hicrm", "higrads", "poors", "phys1000", "region"), axisLabels = 'show', lower = list(combo = wrap("facethist", binwidth = 1)))
 ```
 
-The optimal model included the previously studied covariate `region`, but discarded the `higrads` covariate. In addition, it included the new `poors` and `phys1000` covariates. One explaination why `higrads` was not used in the optimal may be seen in figure \ref{fig:pairs}, where there is a high correlation between `higrads` and `poors`. With incresed multicolinearity the standrard error of the coefficents increase. In worst case this can cause some varibles to become insignificant. Problems such as these are not to unlikley to happen when ivolving both the `region` and `higrads` covariates, which have a correlation of -0.692 bewteen them. This is probably one of the reasons why the optimal model performed better than the interaction model, which had both the `higrads` and `region` as covarites, in the previous section.
+The optimal model included the previously studied covariate `region`, but discarded the `higrads` covariate. In addition, it included the new `poors` and `phys1000` covariates. One explaination why `higrads` was not used in the optimal may be seen in figure \ref{fig:pairs}, where there is a high correlation between `higrads` and `poors`. With increased multicolinearity the standrard error of the coefficents increase. In worst case this can cause some varibles to become insignificant. Problems such as these are not to unlikley to happen when involving both the `region` and `higrads` covariates, which have a correlation of -0.692 bewteen them. This is probably one of the reasons why the optimal model performed better than the interaction model, which had both the `higrads` and `region` as covarites, in the previous section.
 
-This hypothesis was tested in figure \ref{fig:poors_higrads}, where a linear regression model had been fit. Studying the P-value of the model revealed that the $\beta$-values were highly significant.
+This hypothesis was tested in figure \ref{fig:poors_higrads}, where a linear regression model between `poors` and `higrads` was been fit. Studying the P-value of the model revealed that the $\beta$-values were highly significant.
 
 ```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 4, fig.cap="\\label{fig:poors_higrads}Plot of \\texttt{higrads} against \\texttt{poors}, together with linear regression line, with 95 \\% confidence and prediction intervals"}
 plot(higrads ~ poors, data = cdi)
