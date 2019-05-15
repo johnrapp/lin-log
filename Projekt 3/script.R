@@ -5,9 +5,7 @@
 # library(pscl)
 # library(GGally)
 
-dataset <- read.csv("forestfires.csv")
-
-plot.correlation.model <- function(formula, variable.name, range) {
+plot.correlation.model <- function(formula, dataset, variable.name, range) {
   
   model <- lm(formula, data = dataset)
   
@@ -37,7 +35,7 @@ to.prob = function(odds) {
   return (odds / (1 + odds))
 }
 
-plot.binary.model <- function(formula, x, y, variable.name, range, bandwidth) {
+plot.binary.model <- function(formula, dataset, x, y, variable.name, range, bandwidth) {
   plot(formula, data = dataset)
   lines(ksmooth(y, x, bandwidth = bandwidth))
   
