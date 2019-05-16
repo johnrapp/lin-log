@@ -33,15 +33,30 @@ install.packages("tinytex")
 tinytex::install_tinytex()  # install TinyTeX
 ```
 
+```{r, code = readLines("lib.R")}
+
+```
+
 ```{r, code = readLines("script.R")}
 
 
 ```
 
+
 ```{r}
 titanic <- read.csv("titanic.csv")
 titanic <- subset(titanic, select = -c(Name))
-  
+colnames(titanic) <- c(
+  "survived",
+  "pclass",
+  "sex",
+  "age",
+  "siblings.spouses",
+  "parents.children",
+  "fare"
+)
+
+titanic
 ```
 
 
@@ -59,8 +74,44 @@ ggpairs(titanic)
 ```
 
 ```{r}
+hist(titanic$fare)
 
-plot.binary.model(Survived ~ Fare, titanic, titanic$Survived, titanic$Fare, "Fare", c(0, 500), 40)
+high.fare.passengers <- which(titanic$fare > 200)
+
+low.fare.passengers <- which(titanic$fare <= 0)
+
+titanic[high.fare.passengers,]
+titanic[low.fare.passengers,]
+
+length(high.fare.passengers)
+length(low.fare.passengers)
+```
+
+```{r}
+hist(titanic$parents.children)
+which(titanic$parents.children > 2)
+```
+
+
+```{r}
+# titanic <- titanic[-high.fare.passengers,]
+#   
+# hist(log(titanic$Fare))
+
+titanic <- cbind(titanic, log.fare = log(titanic$fare + 1))
+hist(titanic$log.fare)
+```
+
+
+
+```{r}
+model.log.fare <- plot.binary.model(survived ~ log.fare, titanic, titanic$survived, titanic$log.fare, "log.fare", c(0, 500), 1)
+plot.binary.model(survived ~ siblings.spouses, titanic, titanic$survived, titanic$siblings.spouses, "siblings.spouses", c(0, 10), 40)
+plot.binary.model(survived ~ parents.children, titanic, titanic$survived, titanic$parents.children, "parents.children", c(0, 10), 40)
+
+summary(model.log.fare)
+dataset <- titanic
+pR2(model.log.fare)["r2CU"]
 ```
 
 ```{r}
