@@ -31,7 +31,7 @@ plot.correlation.model <- function(formula, dataset, variable.name, range) {
   return (model)
 }
 
-to.prob = function(odds) {
+to.prob <- function(odds) {
   return (odds / (1 + odds))
 }
 
@@ -65,7 +65,7 @@ plot.binary.model <- function(formula, dataset, x, y, variable.name, range, band
   
 }
 
-calc.sense.spec = function(model) {
+calc.sense.spec <- function(model) {
   pred <- titanic
   
   pred <- cbind(pred, prob.survived = predict(model, pred, type = "response"))
@@ -92,7 +92,7 @@ calc.sense.spec = function(model) {
   return(metrics)
 }
 
-calc.metrics = function(model) {
+calc.metrics <- function(model) {
   calc.aic <- AIC(model)
   calc.bic <- AIC(model, k = log(nrow(dataset)))
   sense.spec <- calc.sense.spec(model)
@@ -110,7 +110,7 @@ calc.metrics = function(model) {
   return (metrics)
 }
 
-calc.metrics.models = function(models, model.names) {
+calc.metrics.models <- function(models, model.names) {
   models.metrics <- lapply(models, calc.metrics)
   
   compare.models <- do.call(rbind, models.metrics)
@@ -120,7 +120,7 @@ calc.metrics.models = function(models, model.names) {
   return (compare.models)  
 }
 
-plot.compare.models = function(compare.models, axis.range) {
+plot.compare.models <- function(compare.models, axis.range) {
   n <- nrow(compare.models)
   x <- 1:n
   with(compare.models, {
@@ -144,4 +144,18 @@ plot.compare.models = function(compare.models, axis.range) {
     legend("topright",legend=c("BIC", "AIC","Pseudo R^2"),
            text.col=c("red","red", "blue"), lty=c(1, 2, 1),col=c("red","red", "blue"))
   })
+}
+
+calc.confint.beta <- function(model) {
+  return (cbind(beta = summary(model)$coefficients[, "Estimate"], confint(model)))
+}
+
+calc.pred.prob <- function(model, x0) {
+  pred <- predict(model, x0, se.fit = TRUE, type = "response")
+  
+  standard.error <- 1.96
+  ci.prob <- cbind("2.5 %" = pred$fit - standard.error * pred$se.fit, 
+                   "97.5 %" = pred$fit + standard.error * pred$se.fit)
+  
+  return (cbind(x0, pred$fit * 100, ci.prob * 100))
 }

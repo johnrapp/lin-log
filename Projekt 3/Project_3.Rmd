@@ -193,18 +193,11 @@ Significant
 Look at beta, OR and prob with confidence interval
 
 ```{r}
-
-cbind(beta = sum.age.group$coefficients[, "Estimate"], confint(model.age.group))
-cbind(OR = exp(sum.age.group$coefficients[, "Estimate"]), exp(confint(model.age.group)))
+(confint.beta <- calc.confint.beta(model.age.group))
+(confint.OR <- exp(confint.beta))
 
 x0 <- data.frame(age.group = rownames(freq.table.age.survive))
-pred <- predict(model.age.group, x0, se.fit = TRUE, type = "response")
-
-standard.error <- 1.96
-ci.prob <- cbind("2.5 %" = pred$fit - standard.error * pred$se.fit, 
-                "97.5 %" = pred$fit + standard.error * pred$se.fit)
-
-cbind(x0, pred$fit * 100, ci.prob * 100)
+calc.pred.prob(model.age.group, x0)
 
 ```
 
@@ -267,96 +260,77 @@ plot.compare.models(compare.models, c(1050, 1120))
 
 ## Sex
 
+```{r}
+boxplot(log.fare ~ sex, data = titanic)
+boxplot(age ~ sex, data = titanic)
+
+cross.sex.survive <- table(titanic$sex, titanic$survived)
+
+cross.sex.survive
+prop.table(cross.sex.survive, 1)
+
+```
+
+Much higher percentage of women survived. Most women survived while most men did not
+No major differences in other factors
+
+```{r}
+titanic$sex <- relevel(titanic$sex, ref = "male")
+
+model.sex <- glm(survived ~ sex, data = titanic, family = "binomial")
+
+summary(model.sex)
+```
+```{r}
+(confint.beta <- calc.confint.beta(model.sex))
+(confint.OR <- exp(confint.beta))
+
+x0 <- data.frame(sex = rownames(cross.sex.survive))
+calc.pred.prob(model.sex, x0)
+```
+
+Compare models
 
 
-<!-- ```{r} -->
-<!-- hist(dataset$area) -->
-<!-- hist(dataset$rain) -->
+```{r}
+models <- list(
+  glm(survived ~ log.fare + age, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age.group, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age + sex, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age.group + sex, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass + siblings.spouses, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age.group + sex + pclass + siblings.spouses, data = titanic, family = "binomial")
+)
 
-<!-- hist(log(dataset$area)) -->
-<!-- hist(log(dataset$area + 1)) -->
-<!-- hist(log(dataset$rain)) -->
-<!-- hist(log(dataset$rain + 1)) -->
+titanic
 
-<!-- hist(dataset$temp) -->
-<!-- hist(dataset$RH) -->
-<!-- hist(dataset$wind) -->
+model.names <- c(
+  "f+a",
+  "f+ag",
+  "f+a+s",
+  "f+ag+s",
+  "f+ag+s+c",
+  "all",
+  "all interaction",
+  "some interaction",
+  "no parents",
+  "no parents, group"
+)
 
-<!-- plot(dataset$X, dataset$Y) -->
+compare.models <- calc.metrics.models(models, model.names)
+compare.models
 
-<!-- #temp, RH, wind and rain -->
-<!-- pairs(~ area + temp + RH + wind + rain, data = dataset) -->
+# models[[6]]
+# summary(models[[6]])
+```
 
-<!-- pairs(~ log(area + 1) + temp + RH + wind + log(rain + 1), data = dataset) -->
+```{r, fig.width = 8}
+plot.compare.models(compare.models, c(750, 1100))
+```
 
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- hist(dataset$FFMC) -->
-<!-- hist((dataset$FFMC)^(1/3)) -->
-
-
-<!-- # FFMC, DMC, DC, ISI -->
-<!-- pairs(~ area + FFMC + DMC + DC + ISI, data = dataset) -->
-<!-- pairs(~ log(area + 1) + FFMC + DMC + DC + ISI, data = dataset) -->
-
-<!-- pairs(~ FFMC + DMC + DC + ISI + temp + RH + wind + log(rain + 1), data = dataset) -->
-
-<!-- # pairs(~ log(area + 1) + FFMC.squared + DMC + DC + ISI, data = dataset) -->
-<!-- ``` -->
-
-
-<!-- ```{r} -->
-<!-- dataset <- cbind(dataset, log.area = log(dataset$area + 1), log.rain = log(dataset$rain + 1)) -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- dataset.cut <- dataset[dataset$area > 0,] -->
-<!-- dataset.cut -->
-
-<!-- pairs(~ log(area) + temp + RH + wind, data = dataset.cut) -->
-
-
-<!-- ``` -->
-
-
-
-<!-- ```{r} -->
-<!-- inverse.log <- function(x) exp(x) - 1 -->
-
-<!-- model.wind <- plot.correlation.model(area ~ wind, "wind", c(0, 10)) -->
-<!-- model.temp <- plot.correlation.model(area ~ temp, "temp", c(0, 35)) -->
-<!-- model.RH <- plot.correlation.model(area ~ RH, "RH", c(15, 110)) -->
-
-<!-- summary(model.wind) -->
-<!-- summary(model.temp) -->
-<!-- summary(model.RH) -->
-
-<!-- calc.metrics.models(list(model.wind, model.temp, model.RH), c("wind", "temp", "RH")) -->
-
-<!-- ``` -->
-<!-- ```{r} -->
-<!-- dataset -->
-<!-- hist(dataset$area) -->
-<!-- summary(dataset$area) -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- dataset <- cbind(dataset, big.fire = ifelse(dataset$area > 0, 1, 0)) -->
-
-<!-- pairs(~ big.fire + temp + RH + wind, data = dataset) -->
-
-<!-- ``` -->
-
-<!-- ```{r} -->
-
-<!-- model.wind <- plot.binary.model(big.fire ~ wind, dataset$big.fire, dataset$wind, "wind", c(0, 10), 10) -->
-<!-- model.temp <- plot.binary.model(big.fire ~ temp, dataset$big.fire, dataset$temp, "temp", c(0, 35), 10) -->
-<!-- model.RH <- plot.binary.model(big.fire ~ RH, dataset$big.fire, dataset$RH, "RH", c(15, 110), 10) -->
-
-<!-- summary(model.temp) -->
-<!-- ``` -->
 
 
