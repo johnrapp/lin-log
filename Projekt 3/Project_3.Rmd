@@ -65,7 +65,7 @@ titanic
 
 # Introduction
 
-<!-- The aim of this paper is to use meteorological and other data collected in the northeast of Portugal to predict the burned area of a forest fire. The dependent variable in this paper will be the burned area of the forest (in ha) and the independent variables considered are listed below -->
+<!-- Syfte -->
 
 # Analysis
 
@@ -98,7 +98,7 @@ which(titanic$parents.children > 2)
 #   
 # hist(log(titanic$Fare))
 
-titanic <- cbind(titanic, log.fare = log(titanic$fare + 1))
+titanic$log.fare <- log(titanic$fare + 1)
 hist(titanic$log.fare)
 ```
 
@@ -108,10 +108,98 @@ hist(titanic$log.fare)
 model.log.fare <- plot.binary.model(survived ~ log.fare, titanic, titanic$survived, titanic$log.fare, "log.fare", c(0, 500), 1)
 plot.binary.model(survived ~ siblings.spouses, titanic, titanic$survived, titanic$siblings.spouses, "siblings.spouses", c(0, 10), 40)
 plot.binary.model(survived ~ parents.children, titanic, titanic$survived, titanic$parents.children, "parents.children", c(0, 10), 40)
+plot.binary.model(survived ~ age, titanic, titanic$survived, titanic$age, "age", c(0, 80), 40)
 
 summary(model.log.fare)
 dataset <- titanic
 pR2(model.log.fare)["r2CU"]
+```
+
+```{r}
+hist(log(titanic[which(titanic$pclass == 1),]$fare + 1))
+hist(log(titanic[which(titanic$pclass == 2),]$fare + 1))
+hist(log(titanic[which(titanic$pclass == 3),]$fare + 1))
+```
+
+## Survived vs age
+
+
+Age vs survived
+```{r}
+model.age <- plot.binary.model(survived ~ age, titanic, titanic$survived, titanic$age, "age", c(0, 80), 40)
+
+summary(model.age)
+dataset <- titanic
+pR2(model.age)["r2CU"]
+```
+ 
+```{r}
+# titanic$age.group <- cut(titanic$age, c(0, 12, 20, 35, 55, 100), labels = c("Child", "Adolescent", "Young adult", "Adult", "Senior"))
+# titanic$age.group <- cut(titanic$age, seq(0, 80, 10))
+titanic$age.group <- cut(titanic$age, c(0, 10, 20, 30, 55, 100), labels = c("Child", "Adolescent", "Young adult", "Adult", "Senior"))
+#titanic$age.group <- cut(titanic$age, c(0, 10, 30, 55, 100), labels = c("Child", "Adolescent/Young adult", "Adult", "Senior"))
+titanic$age.group <- relevel(titanic$age.group, ref = "Adult")
+
+table(titanic$age.group)
+
+# plot(log.fare ~ age, data = titanic)
+(cross.age.survive <- table(titanic$age.group, titanic$survived))
+# (cross.age.pclass <- table(titanic$age.group, titanic$pclass))
+# 
+(freq.table <- prop.table(cross.age.survive, 1))
+plot(freq.table[,2])
+axis(1, at=1:nrow(freq.table), rownames(freq.table))
+
+# boxplot(survived ~ age.group, data = titanic)
+
+model.age.group <- glm(survived ~ age.group, data = titanic, family = "binomial")
+
+(sum <- summary(model.age.group))
+
+cbind(sum$coefficients, confint(model.age.group))
+cbind(exp(sum$coefficients), exp(confint(model.age.group)))
+
+x0 <- data.frame(age.group = rownames(freq.table))
+pred <- predict(model.age.group, x0, se.fit = TRUE, type = "response")
+
+standard.error <- 1.96
+ci.prob <- cbind("2.5 %" = pred$fit - standard.error * pred$se.fit, 
+                "97.5 %" = pred$fit + standard.error * pred$se.fit)
+
+# xb <- predict(model.age.group, x0, se.fit = TRUE)
+# ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
+#                     upr = xb$fit + standard.error * xb$se.fit)
+# 
+# cbind(xb$fit, ci.xb)
+
+cbind(x0, pred$fit * 100, ci.prob * 100)
+
+model.age <- glm(survived ~ age, data = titanic, family = "binomial")
+sum.age <- summary(model.age)
+
+data.frame(
+    model = c("age", "age.group"),
+    #r2 = c(sum$adj.r.squared, sum.age$adj.r.squared),
+    aic = c(AIC(model.age), AIC(model.age.group))
+)
+
+
+plot(log(fare + 1) ~ age, data = titanic)
+plot(log(fare + 1) ~ age.group, data = titanic)
+
+```
+
+```{r}
+model.1 <- glm(survived ~ log(fare + 1) + age, data = titanic, family = "binomial")
+model.2 <- glm(survived ~ log(fare + 1) + age.group, data = titanic, family = "binomial")
+model.3 <- glm(survived ~ log(fare + 1) * age.group, data = titanic, family = "binomial")
+
+# summary(model.1)
+# summary(model.2)
+# summary(model.3)
+
+compare.models <- calc.metrics.models(list(model.1, model.2, model.3), c("age","age group","interaction"))
+compare.models
 ```
 
 
