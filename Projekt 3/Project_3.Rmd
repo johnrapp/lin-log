@@ -39,8 +39,9 @@ tinytex::install_tinytex()  # install TinyTeX
 ```
 
 ```{r}
-playstore <- read.csv("googleplaystore.csv")
-playstore.reviews <- read.csv("googleplaystore_user_reviews.csv")
+titanic <- read.csv("titanic.csv")
+titanic <- subset(titanic, select = -c(Name))
+  
 ```
 
 
@@ -54,10 +55,14 @@ playstore.reviews <- read.csv("googleplaystore_user_reviews.csv")
 # Analysis
 
 ```{r}
-
-
-
+ggpairs(titanic)
 ```
+
+```{r}
+
+plot.binary.model(Survived ~ Fare, titanic, titanic$Survived, titanic$Fare, "Fare", c(0, 500), 40)
+```
+
 
 
 <!-- ```{r} -->
