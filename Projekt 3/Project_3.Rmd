@@ -31,7 +31,6 @@ install.packages('rmarkdown')
 # Render PDF
 install.packages("tinytex")
 tinytex::install_tinytex()  # install TinyTeX
-
 ```
 
 ```{r, code = readLines("lib.R")}
@@ -39,6 +38,7 @@ tinytex::install_tinytex()  # install TinyTeX
 ```
 
 ```{r, code = readLines("script.R")}
+
 
 ```
 
@@ -201,6 +201,7 @@ model.3 <- glm(survived ~ log(fare + 1) * age.group, data = titanic, family = "b
 compare.models <- calc.metrics.models(list(model.1, model.2, model.3), c("age","age group","interaction"))
 compare.models
 ```
+
 
 
 
