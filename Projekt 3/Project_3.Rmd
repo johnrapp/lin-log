@@ -31,10 +31,10 @@ install.packages('rmarkdown')
 # Render PDF
 install.packages("tinytex")
 tinytex::install_tinytex()  # install TinyTeX
-
 ```
 
 ```{r, code = readLines("script.R")}
+
 
 ```
 
@@ -62,6 +62,11 @@ ggpairs(titanic)
 
 plot.binary.model(Survived ~ Fare, titanic, titanic$Survived, titanic$Fare, "Fare", c(0, 500), 40)
 ```
+
+```{r}
+
+```
+
 
 
 

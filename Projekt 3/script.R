@@ -1,9 +1,9 @@
-# library(ggplot2)
-# library(knitr)
-# library(dplyr)
-# library(purrr)
-# library(pscl)
-# library(GGally)
+library(ggplot2)
+library(knitr)
+library(dplyr)
+library(purrr)
+library(pscl)
+library(GGally)
 
 plot.correlation.model <- function(formula, dataset, variable.name, range) {
   
