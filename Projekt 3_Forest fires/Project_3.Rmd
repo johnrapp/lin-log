@@ -137,6 +137,22 @@ model.RH <- plot.binary.model(big.fire ~ RH, dataset$big.fire, dataset$RH, "RH",
 summary(model.temp)
 ```
 
+```{r}
+
+model <- lm(log.area ~ wind + temp + RH, data = dataset)
+sum <- summary(model)
+
+sum
+sum$adj.r.squared
+
+model <- lm(log.area ~ wind * temp, data = dataset)
+sum <- summary(model)
+
+sum
+sum$adj.r.squared
+
+```
+
 
 
 <!-- Citation: -->
