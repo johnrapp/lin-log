@@ -102,6 +102,11 @@ titanic$log.fare <- log(titanic$fare + 1)
 hist(titanic$log.fare)
 ```
 
+```{r}
+hist(log(titanic[which(titanic$pclass == 1),]$fare + 1))
+hist(log(titanic[which(titanic$pclass == 2),]$fare + 1))
+hist(log(titanic[which(titanic$pclass == 3),]$fare + 1))
+```
 
 
 ```{r}
@@ -115,11 +120,7 @@ dataset <- titanic
 pR2(model.log.fare)["r2CU"]
 ```
 
-```{r}
-hist(log(titanic[which(titanic$pclass == 1),]$fare + 1))
-hist(log(titanic[which(titanic$pclass == 2),]$fare + 1))
-hist(log(titanic[which(titanic$pclass == 3),]$fare + 1))
-```
+
 
 ## Survived vs age
 
@@ -132,76 +133,139 @@ summary(model.age)
 dataset <- titanic
 pR2(model.age)["r2CU"]
 ```
- 
+
+Divide into age groups?
+- Children saved first
+- Mothers in certain age
+- Seniors not prioritized
+
 ```{r}
-# titanic$age.group <- cut(titanic$age, c(0, 12, 20, 35, 55, 100), labels = c("Child", "Adolescent", "Young adult", "Adult", "Senior"))
-# titanic$age.group <- cut(titanic$age, seq(0, 80, 10))
-titanic$age.group <- cut(titanic$age, c(0, 10, 20, 30, 55, 100), labels = c("Child", "Adolescent", "Young adult", "Adult", "Senior"))
-#titanic$age.group <- cut(titanic$age, c(0, 10, 30, 55, 100), labels = c("Child", "Adolescent/Young adult", "Adult", "Senior"))
+titanic$age.group.even <- cut(titanic$age, seq(0, 80, 10))
+
+cross.age.survive <- table(titanic$age.group.even, titanic$survived)
+freq.table.age.survive <- prop.table(cross.age.survive, 1)
+
+cbind(freq.table.age.survive, count = table(titanic$age.group.even))
+
+plot(freq.table.age.survive[,2])
+axis(1, at=1:nrow(freq.table.age.survive), rownames(freq.table.age.survive))
+```
+
+Good survival rate small children, then lower for young adults, higher for adults, low for seniors
+Little data on 50+, merge into one
+
+```{r}
+```
+
+
+```{r}
+titanic$age.group <- cut(titanic$age, c(0, 15, 30, 55, 100), labels = c("Child",  "Young adult", "Adult", "Senior"))
 titanic$age.group <- relevel(titanic$age.group, ref = "Adult")
 
-table(titanic$age.group)
+cross.age.survive <- table(titanic$age.group, titanic$survived)
+freq.table.age.survive <- prop.table(cross.age.survive, 1)
 
-# plot(log.fare ~ age, data = titanic)
-(cross.age.survive <- table(titanic$age.group, titanic$survived))
-# (cross.age.pclass <- table(titanic$age.group, titanic$pclass))
-# 
-(freq.table <- prop.table(cross.age.survive, 1))
-plot(freq.table[,2])
-axis(1, at=1:nrow(freq.table), rownames(freq.table))
+cbind(freq.table.age.survive, count = table(titanic$age.group))
 
-# boxplot(survived ~ age.group, data = titanic)
+plot(freq.table.age.survive[,2], xaxt = "n")
+axis(1, at=1:nrow(freq.table.age.survive), rownames(freq.table.age.survive))
+```
 
+Quite spread out
+
+```{r}
+table(titanic$age.group, titanic$parents.children)
+table(titanic$age.group, titanic$siblings.spouses)
+```
+
+Hard to distinquish children from parents and siblings from spouses
+
+Next, fit model
+
+```{r}
 model.age.group <- glm(survived ~ age.group, data = titanic, family = "binomial")
 
-(sum <- summary(model.age.group))
+(sum.age.group <- summary(model.age.group))
+```
 
-cbind(sum$coefficients, confint(model.age.group))
-cbind(exp(sum$coefficients), exp(confint(model.age.group)))
+Significant
 
-x0 <- data.frame(age.group = rownames(freq.table))
+Look at beta, OR and prob with confidence interval
+
+```{r}
+
+cbind(beta = sum.age.group$coefficients[, "Estimate"], confint(model.age.group))
+cbind(OR = exp(sum.age.group$coefficients[, "Estimate"]), exp(confint(model.age.group)))
+
+x0 <- data.frame(age.group = rownames(freq.table.age.survive))
 pred <- predict(model.age.group, x0, se.fit = TRUE, type = "response")
 
 standard.error <- 1.96
 ci.prob <- cbind("2.5 %" = pred$fit - standard.error * pred$se.fit, 
                 "97.5 %" = pred$fit + standard.error * pred$se.fit)
 
-# xb <- predict(model.age.group, x0, se.fit = TRUE)
-# ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
-#                     upr = xb$fit + standard.error * xb$se.fit)
-# 
-# cbind(xb$fit, ci.xb)
-
 cbind(x0, pred$fit * 100, ci.prob * 100)
-
-model.age <- glm(survived ~ age, data = titanic, family = "binomial")
-sum.age <- summary(model.age)
-
-data.frame(
-    model = c("age", "age.group"),
-    #r2 = c(sum$adj.r.squared, sum.age$adj.r.squared),
-    aic = c(AIC(model.age), AIC(model.age.group))
-)
-
-
-plot(log(fare + 1) ~ age, data = titanic)
-plot(log(fare + 1) ~ age.group, data = titanic)
 
 ```
 
+
+Compare models, with fare
+
+
 ```{r}
-model.1 <- glm(survived ~ log(fare + 1) + age, data = titanic, family = "binomial")
-model.2 <- glm(survived ~ log(fare + 1) + age.group, data = titanic, family = "binomial")
-model.3 <- glm(survived ~ log(fare + 1) * age.group, data = titanic, family = "binomial")
+models <- list(
+  glm(survived ~ age, data = titanic, family = "binomial"),
+  glm(survived ~ age.group, data = titanic, family = "binomial"),
+  glm(survived ~ age.group.even, data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1), data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1) + age, data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1) + age.group, data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1) + age.group.even, data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1) * age.group, data = titanic, family = "binomial")
+)
+model.names <- c(
+  "age",
+  "group",
+  "even",
+  "fare",
+  "fare + age",
+  "fare + group",
+  "fare + even",
+  "fare * group"
+)
 
-# summary(model.1)
-# summary(model.2)
-# summary(model.3)
-
-compare.models <- calc.metrics.models(list(model.1, model.2, model.3), c("age","age group","interaction"))
+compare.models <- calc.metrics.models(models, model.names)
 compare.models
 ```
 
+```{r, fig.width = 8}
+plot.compare.models(compare.models, c(1050, 1250))
+```
+
+Remove the worst
+```{r}
+models <- list(
+  glm(survived ~ log(fare + 1), data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1) + age, data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1) + age.group, data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1) * age.group, data = titanic, family = "binomial")
+)
+model.names <- c(
+  "fare",
+  "fare + age",
+  "fare + group",
+  "fare * group"
+)
+
+compare.models <- calc.metrics.models(models, model.names)
+compare.models
+```
+
+```{r, fig.width = 8}
+plot.compare.models(compare.models, c(1050, 1120))
+```
+
+## Sex
 
 
 
