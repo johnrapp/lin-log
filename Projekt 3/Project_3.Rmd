@@ -190,6 +190,7 @@ models <- list(
   glm(survived ~ age, data = titanic, family = "binomial"),
   glm(survived ~ age.group, data = titanic, family = "binomial"),
   glm(survived ~ age.group.even, data = titanic, family = "binomial"),
+  glm(survived ~ fare, data = titanic, family = "binomial"),
   glm(survived ~ log(fare + 1), data = titanic, family = "binomial"),
   glm(survived ~ log(fare + 1) + age, data = titanic, family = "binomial"),
   glm(survived ~ log(fare + 1) + age.group, data = titanic, family = "binomial"),
@@ -200,6 +201,7 @@ model.names <- c(
   "age",
   "group",
   "even",
+  "!log.fare",
   "fare",
   "fare + age",
   "fare + group",
@@ -309,6 +311,7 @@ Analys kvar:
 
 Saker kvar:
 - PPT template och shell deck/outline över stor
+- Lägga till sense & spec till compare.models.plot
 
 Story:
 - Dataset, kvalitativt. Berätta lite om titanic
@@ -327,4 +330,15 @@ Story:
   - Förklaring till varför den funkar
   - Cooks etc
 - Resultat
+  - Metrics
+  - A/B
   - Slide med de här personerna och deras survival rates
+
+Innan nästa vecka:
+  - John:
+    - Is alone analys
+    - PPT template med lite shell
+  - Axel
+    - Resterande analys: fare, siblings etc, Cooks distance
+    - Dataset, Syfte, Dataset (utkast)
+    - Börja på feature engineering
