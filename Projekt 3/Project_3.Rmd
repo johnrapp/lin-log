@@ -115,9 +115,77 @@ pR2(model.log.fare)["r2CU"]
 ```
 
 ```{r}
+# The log(fare) model
+
+model.log.fare <- plot.binary.model(survived ~ log.fare, titanic, titanic$survived, titanic$log.fare, "log.fare", c(0, 500), 1)
+
+model.log.fare <- glm(survived ~ log.fare, data = titanic, family = "binomial")
+
+sum <- summary(model.log.fare)
+
+```
+Seems reasomable, kernel smoother looks good. The fitted model and kernel smoother cover a large part of the Y-axis. Should consider removing extreme data far to the left if they have a large influence, Cook's distance and influence will tell the. 
+
+```{r}
+coeff.beta <- model.log.fare$coefficients
+
+ci.beta <- suppressMessages(confint(model.log.fare))
+
+beta.p <- sum$coefficients[, "Pr(>|z|)"]
+
+
+
+table.beta.ci <- cbind("Estimate" = coeff.beta, ci.beta, "P-value" = beta.p)
+row.names(table.beta.ci) <- c("$\\beta_0$", "$\\beta_{log(fare)}$")
+
+table.caption <- "\\label{tab:log(fare)_beta}$\\beta$-values of \\texttt{log(fare)} model, with 95 \\% confidence inteval"
+kable(table.beta.ci, caption = table.caption, digits = c(rep(2,3), 5))
+
+
+
+```
+Both of the Beta estimates have a P-value which is very small, meaning that the estimates are significant to a very high extent. 
+
+
+```{r}
+standard.error = 1.96
+x0 <- data.frame(log.fare = c(log(15), log(100)))
+
+exp.x0 <- exp(x0)
+
+
+
+predx <- cbind(x0, prob = predict(model.log.fare, x0, type = "response"))
+
+xb <- predict(model.log.fare, x0, se.fit = TRUE)
+ci.xb <- data.frame(lwr = xb$fit - standard.error * xb$se.fit,
+                    upr = xb$fit + standard.error * xb$se.fit)
+# transform to CI for the odds:
+ci.odds <- exp(ci.xb)
+
+# and finally CI for the probabilities and add to the plot:
+predx <- cbind(predx$log.fare, predx$prob * 100, to.prob(ci.odds) * 100)
+predx[,1] <-exp.x0
+
+table.caption <- "\\label{tab:log.fare_predictions} Predictions of `log.fare` model"
+kable(predx, caption = table.caption, col.names = c("Fare Price", "Probability (%)", "2.5 %", "97.5 %"), digits = 1)
 
 ```
 
+#Adding a varible, that say that the predcted chance of survival is true or 1 if the probability of survival is over 50 % and vice verca for the chance of not surviving if the survival probability is less than 50 %. 
+
+```{r}
+
+
+
+
+```
+
+
+
+
+
+Model Performance Analysis
 
 
 
