@@ -194,14 +194,18 @@ cooks.plots <- function(models) {
   
 }
 
-dfbeta.plot <- function(model) {
+dfbeta.plot <- function(model, dataset, f) {
+  n <- nrow(dataset)
   xb <- predict(model)
   dfb <- dfbetas(model)
   
   plot(dfb[, "(Intercept)"] ~ xb, ylim = c(-1, 1), main = "DFbeta.Intercept")
   abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
-  plot(dfb[, "log.fare"] ~ xb, ylim = c(-1, 1), main = "DFbeta.log.fare")
-  abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
+  
+  if(f == 1) {
+    plot(dfb[, "log.fare"] ~ xb, ylim = c(-1, 1), main = "DFbeta.log.fare")
+    abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
+  } 
   plot(dfb[, "age"] ~ xb, ylim = c(-1, 1), main = "DFbeta.age")
   abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
   plot(dfb[, "sexfemale"] ~ xb, ylim = c(-1, 1), main = "DFbeta.sex.female")

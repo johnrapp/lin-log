@@ -100,9 +100,9 @@ hist(log(titanic[which(titanic$pclass == 3),]$fare + 1))
 
 
 ```{r}
-model.log.fare <- plot.binary.model(survived ~ log.fare, titanic, titanic$survived, titanic$log.fare, "log.fare", c(0, 500), 1)
-plot.binary.model(survived ~ siblings.spouses, titanic, titanic$survived, titanic$siblings.spouses, "siblings.spouses", c(0, 10), 40)
-plot.binary.model(survived ~ parents.children, titanic, titanic$survived, titanic$parents.children, "parents.children", c(0, 10), 40)
+model.log.fare <- plot.binary.model(survived ~ fare, titanic, titanic$survived, titanic$fare, "fare", c(0, 500), 40)
+plot.binary.model(survived ~ siblings.spouses, titanic, titanic$survived, titanic$siblings.spouses, "siblings.spouses", c(0, 10), 1)
+plot.binary.model(survived ~ parents.children, titanic, titanic$survived, titanic$parents.children, "parents.children", c(0, 10), 10)
 plot.binary.model(survived ~ age, titanic, titanic$survived, titanic$age, "age", c(0, 80), 40)
 summary(model.log.fare)
 dataset <- titanic
@@ -110,8 +110,35 @@ pR2(model.log.fare)["r2CU"]
 ```
 
 
+#fare vs log.fare
+
+```{r}
+model.1 <- glm(survived ~ fare, data = titanic, family = "binomial")
+model.2 <- glm(survived ~ log.fare, data = titanic, family = "binomial")
+
+model.list <- list(
+  glm(survived ~ fare, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare, data = titanic, family = "binomial")
+)
+
+model.nomas <- c(
+  "fare",
+  "log.fare"
+)
+
+model.met <- calc.metrics.models(model.list, model.nomas)
+kable(model.met, digits = 3)
+
+```
+
+
+
+
 
 ## Survived vs age
+
+
+
 
 
 Age vs survived
@@ -181,6 +208,40 @@ x0 <- data.frame(age.group = rownames(freq.table.age.survive))
 calc.pred.prob(model.age.group, x0)
 ```
 
+```{r}
+
+
+
+los <- list(
+ 
+  glm(survived ~ parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ siblings.spouses, data = titanic, family = "binomial"),
+  glm(survived ~ age, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare, data = titanic, family = "binomial"),
+  glm(survived ~ pclass, data = titanic, family = "binomial"),
+  glm(survived ~ sex, data = titanic, family = "binomial")
+)
+
+
+losnames <- c(
+  "parents.children",
+  "siblings.spouses",
+  "age",
+  "fare",
+  "pclass",
+  "sex"
+)
+
+(losmetricas <- calc.metrics.models(los, losnames))
+
+
+```
+
+```{r, fig.width = 8}
+plot.compare.models(losmetricas, c(900, 1250))
+```
+
+
 
 Compare models, with fare
 
@@ -208,8 +269,8 @@ model.names <- c(
   "fare + even",
   "fare * group"
 )
-compare.models <- calc.metrics.models(models, model.names)
-compare.models
+(compare.models <- calc.metrics.models(models, model.names))
+
 ```
 
 ```{r, fig.width = 8}
@@ -246,7 +307,20 @@ boxplot(age ~ sex, data = titanic)
 cross.sex.survive <- table(titanic$sex, titanic$survived)
 cross.sex.survive
 prop.table(cross.sex.survive, 1)
+
 ```
+```{r}
+cross.sex.survive <- table(titanic$pclass, titanic$survived)
+cross.sex.survive
+prop.table(cross.sex.survive, 1)
+```
+```{r}
+cross.sex.survive <- table(titanic$parents.children, titanic$survived)
+prop.table(cross.sex.survive, 1)
+
+
+```
+
 
 Much higher percentage of women survived. Most women survived while most men did not
 No major differences in other factors
@@ -260,7 +334,7 @@ summary(model.sex)
 (confint.beta <- calc.confint.beta(model.sex))
 (confint.OR <- exp(confint.beta))
 x0 <- data.frame(sex = rownames(cross.sex.survive))
-calc.pred.prob(model.sex, x0)
+#calc.pred.prob(model.sex, x0)
 ```
 
 Compare models
@@ -270,27 +344,39 @@ Compare models
 models <- list(
   glm(survived ~ log.fare + age, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age.group, data = titanic, family = "binomial"),
+  glm(survived ~ pclass + age, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age + sex, data = titanic, family = "binomial"),
+  glm(survived ~ pclass + age + sex, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age.group + sex, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age + sex + pclass, data = titanic, family = "binomial"),
+  glm(survived ~ pclass + age + sex, data = titanic, family = "binomial"),
+  glm(survived ~ age + sex + pclass + siblings.spouses + parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + siblings.spouses + parents.children, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children, data = titanic, family = "binomial"),
   glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age + sex + pclass + siblings.spouses, data = titanic, family = "binomial"),
-  glm(survived ~ log.fare + age.group + sex + pclass + siblings.spouses, data = titanic, family = "binomial")
+  glm(survived ~ log.fare + age.group + sex + pclass + siblings.spouses, data = titanic, family = "binomial"),
+  glm(survived ~ age*parents.children * siblings.spouses*pclass*sex, data = titanic, family = "binomial")
 )
 titanic
 model.names <- c(
   "f+a",
   "f+ag",
+  "p+a",
   "f+a+s",
+  "p+a+s",
   "f+ag+s",
-  "f+ag+s+c",
+  "f+a+s+p",
+  "p+a+s",
+  "all but fare",
+  "all but pclass",
   "all",
   "all interaction",
   "some interaction",
   "no parents",
-  "no parents, group"
+  "no parents, group",
+  "interaction, no fare"
 )
 compare.models <- calc.metrics.models(models, model.names)
 compare.models
@@ -298,8 +384,23 @@ compare.models
 # summary(models[[6]])
 ```
 
+The best three models are
+```{r}
+best.models <- list(
+  glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ age*parents.children * siblings.spouses*pclass*sex, data = titanic, family = "binomial")
+)
+best.models.names <- c(
+  "all",
+  "all interaction",
+  "some interaction, no fare"
+)
+
+(metrics <- calc.metrics.models(best.models, best.models.names))
 
 
+```
 
 
 
@@ -332,7 +433,7 @@ model.all <- glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + p
 
 model.all.interaction <- glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic, family = "binomial")
 
-model.some.interaction <- glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic, family = "binomial")
+model.some.interaction <- glm(survived ~ age * parents.children * siblings.spouses * pclass * sex, data = titanic, family = "binomial")
 
 best.models <- list(
   model.all,
@@ -353,7 +454,6 @@ model.all and model.all.interaction seem to be in best allignment with a normal 
 Cook's
 
 ```{r}
-cook.plotter(model.all, titanic)
 
 sapply(best.models, cook.plotter, titanic)
 
@@ -371,9 +471,9 @@ sapply(best.models, cook.plotter, titanic)
 DF-betas
 
 ```{r}
-dfbeta.plot(model.all)
-dfbeta.plot(model.all.interaction)
-dfbeta.plot(model.some.interaction)
+dfbeta.plot(model.all, titanic, 1)
+dfbeta.plot(model.all.interaction, titanic, 1)
+dfbeta.plot(model.some.interaction, titanic, 0)
 
 ```
 
