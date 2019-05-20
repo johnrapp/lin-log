@@ -109,6 +109,10 @@ dataset <- titanic
 pR2(model.log.fare)["r2CU"]
 ```
 
+```{r}
+(confint.beta <- calc.confint.beta(model.log.fare))
+(confint.OR <- calc.confint.OR(confint.beta))
+```
 
 
 ## Survived vs age
@@ -132,7 +136,7 @@ titanic$age.group.even <- cut(titanic$age, seq(0, 80, 10))
 cross.age.survive <- table(titanic$age.group.even, titanic$survived)
 freq.table.age.survive <- prop.table(cross.age.survive, 1)
 cbind(freq.table.age.survive, count = table(titanic$age.group.even))
-plot(freq.table.age.survive[,2])
+plot(freq.table.age.survive[,2], xaxt = "n")
 axis(1, at=1:nrow(freq.table.age.survive), rownames(freq.table.age.survive))
 ```
 
@@ -143,7 +147,7 @@ Little data on 50+, merge into one
 ```
 
 
-```{r}
+```{r, fig.height=5, fig.width=10}
 titanic$age.group <- cut(titanic$age, c(0, 15, 30, 55, 100), labels = c("Child",  "Young adult", "Adult", "Senior"))
 titanic$age.group <- relevel(titanic$age.group, ref = "Adult")
 
@@ -176,7 +180,7 @@ Look at beta, OR and prob with confidence interval
 
 ```{r}
 (confint.beta <- calc.confint.beta(model.age.group))
-(confint.OR <- exp(confint.beta))
+(confint.OR <- calc.confint.OR(confint.beta))
 x0 <- data.frame(age.group = rownames(freq.table.age.survive))
 calc.pred.prob(model.age.group, x0)
 ```
@@ -263,7 +267,32 @@ x0 <- data.frame(sex = rownames(cross.sex.survive))
 calc.pred.prob(model.sex, x0)
 ```
 
-Compare models
+# Is alone
+
+```{r}
+
+titanic$is.alone <- ifelse(titanic$siblings.spouses + titanic$parents.children == 0, 1, 0)
+
+table(titanic$is.alone)
+
+(cross.table <- with(titanic, table(is.alone, survived)))
+rownames(cross.table) <- c("Not alone", "Alone")
+colnames(cross.table) <- c("Not survived", "Survived")
+
+create.table.png(cross.table, table.name = "is-alone_vs_survivors")
+
+prop.table(cross.table, 1)
+prop.table(cross.table, 2)
+```
+
+Most were alone
+
+Of those who were alone, less survived
+
+Of those who survived, about 50% were alone, of those who did not survive, most were alone
+
+
+# Compare models
 
 
 ```{r}
@@ -274,7 +303,9 @@ models <- list(
   glm(survived ~ log.fare + age.group + sex, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age + sex + pclass, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children + is.alone, data = titanic, family = "binomial"),
   glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children * is.alone, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age + sex + pclass + siblings.spouses, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age.group + sex + pclass + siblings.spouses, data = titanic, family = "binomial")
@@ -287,7 +318,9 @@ model.names <- c(
   "f+ag+s",
   "f+ag+s+c",
   "all",
+  "all+alone",
   "all interaction",
+  "all+alone interaction",
   "some interaction",
   "no parents",
   "no parents, group"
@@ -309,8 +342,7 @@ compare.models
 
 
 ```{r, fig.width = 12}
-plot.compare.models(compare.models, c(750, 1100))
-
+plot.compare.models(compare.models, c(750, 1150))
 ```
 The three top performing models as can be seen in the digram above are: 
 
@@ -340,7 +372,7 @@ best.models <- list(
   model.some.interaction
 )
 
-lapply(best.models, QQ)
+lapply(best.models, qq)
 
 
 
@@ -362,9 +394,9 @@ sapply(best.models, cook.plotter, titanic)
 DF-betas
 
 ```{r}
-dfbeta.plot(model.all)
-dfbeta.plot(model.all.interaction)
-dfbeta.plot(model.some.interaction)
+# dfbeta.plot(model.all)
+# dfbeta.plot(model.all.interaction)
+# dfbeta.plot(model.some.interaction)
 
 ```
 
@@ -424,26 +456,12 @@ The optimal model acording to us is the the some interaction model. While it sti
 
 Backward Selection:
 ```{r}
-model.optimal <- glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic, family = "binomial")
+optimal.model <- glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic, family = "binomial")
 calc.metrics(optimal.model)
 
 ```
 
 No change in removing any varible caused the Pseudo R2 to drop compared to the original model. Thus the optimal model reminas unchanged.  
-
-
-
-
-
-Analys kvar:
-- Pclass, kolla lite på (Axel)
-- sibling, parents etc, kolla lite på, jämföra med att slänga ihop (Axel)
-- is alone, kolla lite på (John)
-- Cooks distance mm
-
-Saker kvar:
-- PPT template och shell deck/outline över stor
-- Lägga till sense & spec till compare.models.plot
 
 Story:
 - Dataset, kvalitativt. Berätta lite om titanic
@@ -466,11 +484,11 @@ Story:
   - A/B
   - Slide med de här personerna och deras survival rates
 
-Innan nästa vecka:
-  - John:
-    - Is alone analys
-    - PPT template med lite shell
-  - Axel
-    - Resterande analys: fare, siblings etc, Cooks distance
-    - Dataset, Syfte, Dataset (utkast)
-    - Börja på feature engineering
+John:
+- Is alone analys
+- Lägga till sense och spec i grafer
+- Fortsätta på deck
+- Dela upp i A/B
+Axel
+- Dataset, Syfte, Dataset (utkast)
+- Börja på feature engineering

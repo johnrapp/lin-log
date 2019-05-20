@@ -4,6 +4,7 @@ library(dplyr)
 library(purrr)
 library(pscl)
 library(GGally)
+library(gridExtra)
 
 plot.correlation.model <- function(formula, dataset, variable.name, range) {
   
@@ -134,20 +135,26 @@ plot.compare.models <- function(compare.models, axis.range) {
     lines(x, bic, col = "red", lty = 1, lwd = 2)
     
     par(new = TRUE)
-    plot(x, rep(0, n), type = "n", axes = FALSE, ylim = c(0, 1), xaxt = "n",
+    plot(x, rep(0, n), type = "n", axes = FALSE, ylim = c(0, 1.243), xaxt = "n",
          xlab = "", ylab = "")
     lines(x, PseudoR2, col = "blue", lty = 1, lwd = 2)
+    lines(x, sensitivity, col = "green", lty = 1, lwd = 2)
+    lines(x, specificity, col = "green", lty = 2, lwd = 2)
     best.model <- 3
     axis(side=4, at = pretty(c(0, 1)))
-    mtext("Pseudo R^2", side=4, line=3)
+    mtext("Percent", side=4, line=3)
     
-    legend("topright",legend=c("BIC", "AIC","Pseudo R^2"),
-           text.col=c("red","red", "blue"), lty=c(1, 2, 1),col=c("red","red", "blue"))
+    legend("topright", legend=c("BIC", "AIC", "Pseudo R^2", "Specificity", "Sensitivity"),
+           text.col=c("red","red", "blue", "green", "green"), lty=c(1, 2, 1, 2, 1),col=c("red","red", "blue", "green", "green"))
   })
 }
 
 calc.confint.beta <- function(model) {
   return (cbind(beta = summary(model)$coefficients[, "Estimate"], confint(model)))
+}
+calc.confint.OR <- function(confint.beta) {
+  confint.OR <- exp(confint.beta)[-1, ]
+  colnames(confint.OR)[1] <- "OR"
 }
 
 calc.pred.prob <- function(model, x0) {
@@ -174,8 +181,7 @@ qq <- function(model) {
   qqline(r)
 }
 
-#Funkar ej, Vrf?
-QQtable <- fuction(models) {
+QQtable <- function(models) {
    table <- lapply(models, QQ)
 }
 
@@ -212,6 +218,13 @@ dfbeta.plot <- function(model) {
   abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
   plot(dfb[, "parents.children"] ~ xb, ylim = c(-1, 1), main = "DFbeta.parents.children")
   abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
+}
+
+create.table.png <- function(table, table.name) {
+  file.name <- paste("tables/", table.name, ".png", sep = "")
   
+  png(filename = file.name, height = 50 * nrow(table), width = 200 * ncol(table), bg = "white")
+  grid.table(table)
+  dev.off()
 }
 
