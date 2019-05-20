@@ -51,9 +51,16 @@ colnames(titanic) <- c(
   "parents.children",
   "fare"
 )
+titanic$pclass <- factor(titanic$pclass, levels = c(1,2,3))
+
 titanic
 ```
 
+```{r}
+splitted.dataset <- split.dataset(titanic)
+(titanic.train <- splitted.dataset[[1]])
+(titanic.test <- splitted.dataset[[2]])
+```
 
 
 <!-- Abstract? -->
@@ -110,8 +117,37 @@ pR2(model.log.fare)["r2CU"]
 ```
 
 ```{r}
-(confint.beta <- calc.confint.beta(model.log.fare))
-(confint.OR <- calc.confint.OR(confint.beta))
+confint.beta <- calc.confint.beta(model.log.fare)
+
+confint.OR <- calc.confint.OR(confint.beta)
+
+cbind(beta = round(confint.beta[,"beta"], 1),
+      OR = round(confint.OR, 1),
+      "P-value" = round(confint.beta[,"P-value"], 4))
+
+# create.table.png(confint.OR, "fare-OR")
+```
+
+```{r}
+models <- list(
+  glm(survived ~ fare, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare, data = titanic, family = "binomial")
+)
+
+model.names <- c(
+  "fare",
+  "log.fare"
+)
+
+compare.models <- calc.metrics.models(models, model.names)
+# create.table.png(compare.models, "compare-fare-log")
+
+cbind("AIC" = round(compare.models$aic, 0),
+      "BIC" = round(compare.models$bic, 0),
+      "Sensitivity (%)" = round(compare.models$sensitivity * 100, 1),
+      "Specificity (%)" = round(compare.models$specificity * 100, 1),
+      "Pseudo R^2 (%)" = round(compare.models$PseudoR2 * 100, 1))
+
 ```
 
 
@@ -179,12 +215,54 @@ Significant
 Look at beta, OR and prob with confidence interval
 
 ```{r}
-(confint.beta <- calc.confint.beta(model.age.group))
-(confint.OR <- calc.confint.OR(confint.beta))
+confint.beta <- calc.confint.beta(model.age.group)
+
+confint.OR <- calc.confint.OR(confint.beta)
+
+cbind(beta = round(confint.beta[,"beta"], 1),
+      OR = round(confint.OR, 1),
+      "P-value" = round(confint.beta[,"P-value"], 4))
+
 x0 <- data.frame(age.group = rownames(freq.table.age.survive))
 calc.pred.prob(model.age.group, x0)
 ```
 
+```{r}
+models <- list(
+  glm(survived ~ age, data = titanic, family = "binomial"),
+  glm(survived ~ age.group, data = titanic, family = "binomial"),
+  glm(survived ~ age.group.even, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age.group, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare * age, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare * age.group, data = titanic, family = "binomial")
+)
+
+model.names <- c(
+  "age",
+  "age.group",
+  "age.group.even",
+  "log.fare + age",
+  "log.fare + age.group",
+  "log.fare * age",
+  "log.fare * age.group"
+)
+
+compare.models <- calc.metrics.models(models, model.names)
+# create.table.png(compare.models, "compare-fare-log")
+
+cbind("AIC" = round(compare.models$aic, 0),
+      "BIC" = round(compare.models$bic, 0),
+      "Sensitivity (%)" = round(compare.models$sensitivity * 100, 1),
+      "Specificity (%)" = round(compare.models$specificity * 100, 1),
+      "Pseudo R^2 (%)" = round(compare.models$PseudoR2 * 100, 1))
+
+lapply(models, function (model) summary(model)$coefficients)
+```
+
+```{r, fig.width = 12}
+plot.compare.models(compare.models, c(1050, 1300))
+```
 
 Compare models, with fare
 
@@ -216,7 +294,7 @@ compare.models <- calc.metrics.models(models, model.names)
 compare.models
 ```
 
-```{r, fig.width = 8}
+```{r, fig.width = 12}
 plot.compare.models(compare.models, c(1050, 1250))
 ```
 
@@ -249,7 +327,8 @@ boxplot(log.fare ~ sex, data = titanic)
 boxplot(age ~ sex, data = titanic)
 cross.sex.survive <- table(titanic$sex, titanic$survived)
 cross.sex.survive
-prop.table(cross.sex.survive, 1)
+
+round(prop.table(cross.sex.survive, 1) * 100)
 ```
 
 Much higher percentage of women survived. Most women survived while most men did not
@@ -292,6 +371,28 @@ Of those who were alone, less survived
 Of those who survived, about 50% were alone, of those who did not survive, most were alone
 
 
+```{r}
+model.is.alone <- glm(survived ~ is.alone, data = titanic, family = "binomial")
+summary(model.is.alone)
+```
+
+
+
+# Pclass
+```{r}
+
+cross.pclass.survive <- table(titanic$pclass, titanic$survived)
+cross.pclass.survive
+
+round(prop.table(cross.pclass.survive, 1) * 100)
+
+```
+
+```{r}
+model.pclass <- glm(survived ~ pclass, data = titanic, family = "binomial")
+summary(model.pclass)
+```
+
 # Compare models
 
 
@@ -303,9 +404,9 @@ models <- list(
   glm(survived ~ log.fare + age.group + sex, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age + sex + pclass, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children, data = titanic, family = "binomial"),
-  glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children + is.alone, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass + is.alone, data = titanic, family = "binomial"),
   glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic, family = "binomial"),
-  glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children * is.alone, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare * age * sex * pclass * is.alone, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age + sex + pclass + siblings.spouses, data = titanic, family = "binomial"),
   glm(survived ~ log.fare + age.group + sex + pclass + siblings.spouses, data = titanic, family = "binomial")
@@ -344,6 +445,46 @@ compare.models
 ```{r, fig.width = 12}
 plot.compare.models(compare.models, c(750, 1150))
 ```
+
+<!-- A/B -->
+```{r}
+models <- list(
+  glm(survived ~ log.fare + age, data = titanic.train, family = "binomial"),
+  glm(survived ~ log.fare + age.group, data = titanic.train, family = "binomial"),
+  glm(survived ~ log.fare + age + sex, data = titanic.train, family = "binomial"),
+  glm(survived ~ log.fare + age.group + sex, data = titanic.train, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass, data = titanic.train, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children, data = titanic.train, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass + is.alone, data = titanic.train, family = "binomial"),
+  glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic.train, family = "binomial"),
+  glm(survived ~ log.fare * age * sex * pclass * is.alone, data = titanic.train, family = "binomial"),
+  glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic.train, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass + siblings.spouses, data = titanic.train, family = "binomial"),
+  glm(survived ~ log.fare + age.group + sex + pclass + siblings.spouses, data = titanic.train, family = "binomial")
+)
+titanic
+model.names <- c(
+  "f+a",
+  "f+ag",
+  "f+a+s",
+  "f+ag+s",
+  "f+ag+s+c",
+  "all",
+  "all+alone",
+  "all interaction",
+  "all+alone interaction",
+  "some interaction",
+  "no parents",
+  "no parents, group"
+)
+compare.models <- calc.metrics.models(models, model.names)
+compare.models
+# models[[6]]
+# summary(models[[6]])
+```
+<!-- A/B -->
+
+
 The three top performing models as can be seen in the digram above are: 
 
 All,
@@ -406,7 +547,7 @@ From the DFbeta plots it looks like the all.interaction has several issues. For 
 
 ```{r}
 dfb <- dfbetas(model.all.interaction)
-dfb
+#dfb
 d.Intercept <- as.vector(dfb[,1])
 d.log.fare <- as.vector(dfb[,2])
 d.age <- as.vector(dfb[,3])

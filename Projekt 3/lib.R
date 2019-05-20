@@ -150,11 +150,11 @@ plot.compare.models <- function(compare.models, axis.range) {
 }
 
 calc.confint.beta <- function(model) {
-  return (cbind(beta = summary(model)$coefficients[, "Estimate"], confint(model)))
+  coeff <- summary(model)$coefficients
+  return (cbind(beta = coeff[, "Estimate"], confint(model), "P-value" = coeff[, "Pr(>|z|)"]))
 }
 calc.confint.OR <- function(confint.beta) {
-  confint.OR <- exp(confint.beta)[-1, ]
-  colnames(confint.OR)[1] <- "OR"
+  return (cbind(OR = exp(confint.beta[, "beta"]), exp(confint.beta[, c("2.5 %", "97.5 %")]), "P-value" = confint.beta[, c("P-value")]))
 }
 
 calc.pred.prob <- function(model, x0) {
@@ -227,8 +227,24 @@ dfbeta.plot <- function(model, dataset, f) {
 create.table.png <- function(table, table.name) {
   file.name <- paste("tables/", table.name, ".png", sep = "")
   
-  png(filename = file.name, height = 50 * nrow(table), width = 200 * ncol(table), bg = "white")
+  rows <- NROW(table)
+  cols <- NCOL(table)
+  
+  png(filename = file.name, height = 50 * rows, width = 200 * cols, bg = "white")
   grid.table(table)
   dev.off()
 }
 
+split.dataset <- function(dataset) {
+  ## 75% of the sample size
+  smp_size <- floor(0.75 * nrow(dataset))
+  
+  ## set the seed to make your partition reproducible
+  set.seed(123)
+  train_ind <- sample(seq_len(nrow(dataset)), size = smp_size)
+  
+  train <- dataset[train_ind, ]
+  test <- dataset[-train_ind, ]
+  
+  return (list(train, test))
+}
