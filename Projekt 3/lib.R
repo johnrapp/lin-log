@@ -159,3 +159,59 @@ calc.pred.prob <- function(model, x0) {
   
   return (cbind(x0, pred$fit * 100, ci.prob * 100))
 }
+
+
+qq <- function(model) {
+  model.plot <- model
+  influence.plot <- influence(model)
+  
+  xb <- predict(model.plot)
+  
+  r <- influence.plot$pear.res / sqrt(1 - influence.plot$hat)
+  ds <- influence.plot$dev.res / sqrt(1 - influence.plot$hat)
+  
+  qqnorm(r)
+  qqline(r)
+}
+
+#Funkar ej, Vrf?
+QQtable <- fuction(models) {
+   table <- lapply(models, QQ)
+}
+
+cook.plotter <- function(model, dataset) {
+  n <- nrow(dataset)
+  data <- dataset
+  cook.plot <- cooks.distance(model)
+  xb <- predict(model)
+  
+  with(data, plot(cook.plot ~ xb, ylab = "Cook's distance"))
+  abline(h = c(1, 4 / n), col = "red", lty = 2)
+}
+
+cooks.plots <- function(models) {
+  
+  
+}
+
+dfbeta.plot <- function(model) {
+  xb <- predict(model)
+  dfb <- dfbetas(model)
+  
+  plot(dfb[, "(Intercept)"] ~ xb, ylim = c(-1, 1), main = "DFbeta.Intercept")
+  abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
+  plot(dfb[, "log.fare"] ~ xb, ylim = c(-1, 1), main = "DFbeta.log.fare")
+  abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
+  plot(dfb[, "age"] ~ xb, ylim = c(-1, 1), main = "DFbeta.age")
+  abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
+  plot(dfb[, "sexfemale"] ~ xb, ylim = c(-1, 1), main = "DFbeta.sex.female")
+  abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
+  plot(dfb[, "pclass"] ~ xb, ylim = c(-1, 1), main = "DFbeta.pclass")
+  abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
+  plot(dfb[, "siblings.spouses"] ~ xb, ylim = c(-1, 1), main = "DFbeta.siblings.spouses")
+  abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
+  plot(dfb[, "parents.children"] ~ xb, ylim = c(-1, 1), main = "DFbeta.parents.children")
+  abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
+  
+}
+

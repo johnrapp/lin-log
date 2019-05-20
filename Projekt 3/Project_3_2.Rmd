@@ -298,10 +298,142 @@ compare.models
 # summary(models[[6]])
 ```
 
+
+
+
+
+
+
+
+
+
+
 ```{r, fig.width = 12}
 plot.compare.models(compare.models, c(750, 1100))
 
 ```
+The three top performing models as can be seen in the digram above are: 
+
+All,
+
+All interaction,
+
+Some, interaction
+
+
+Down below, a comparison of the three models unfolds dadada.
+
+
+
+QQ-plot
+
+```{r}
+model.all <- glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children, data = titanic, family = "binomial")
+
+model.all.interaction <- glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic, family = "binomial")
+
+model.some.interaction <- glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic, family = "binomial")
+
+best.models <- list(
+  model.all,
+  model.all.interaction,
+  model.some.interaction
+)
+
+lapply(best.models, QQ)
+
+
+
+
+```
+
+model.interaction.some seem to be in best allignment with a normal distribution. The others dont fall to short though. In order to value the influence of outliers, Cook's distance plots for the three models are plotted below. 
+
+
+Cook's
+
+```{r}
+cook.plotter(model.all, titanic)
+
+sapply(best.models, cook.plotter, titanic)
+
+```
+
+DF-betas
+
+```{r}
+dfbeta.plot(model.all)
+dfbeta.plot(model.all.interaction)
+dfbeta.plot(model.some.interaction)
+
+```
+
+From the DFbeta plots it looks like the all.interaction has several issues. For the DFbeta.parents.children there are several points that are with quite the marignal above the horizontal lines. For the all model and the some.interaction model, The points in the plots are a lot more centered around the x axis, and the outliers are not as far away, (Fewer and closer). In the all.interaction model we want to look at the data entires that causes DF-beta values above 0.5. 
+
+
+
+```{r}
+dfb <- dfbetas(model.all.interaction)
+dfb
+d.Intercept <- as.vector(dfb[,1])
+d.log.fare <- as.vector(dfb[,2])
+d.age <- as.vector(dfb[,3])
+d.sexfemale <- as.vector(dfb[,4])
+d.pclass <- as.vector(dfb[,5])
+d.siblings.spouses <- as.vector(dfb[,6])
+d.parents.children <- as.vector(dfb[,7])
+d.log.fare
+
+outlier.index1 <- which(d.Intercept > 0.5) #372
+(outlier.index2 <- which(d.log.fare > 0.5)) 
+(outlier.index3 <- which(d.age > 0.5))
+(outlier.index4 <- which(d.sexfemale > 0.5))
+(outlier.index5 <- which(d.pclass > 0.5))
+(outlier.index6 <- which(d.siblings.spouses > 0.5)) #503 
+(outlier.index7 <- which(d.parents.children > 0.5)) #97 118 677  (where    677 > 1) 
+
+
+
+
+
+```
+Entry 372 was a 22 year old man, alone, payed a substantial amount and stayed in first class. 
+
+Entry 503 was an 18 year old man, had one sibling or spouse on board, payed a substantial amount and stayed in first class
+
+entry 97 was a 23 year old man with no spouse and either a parent or a child onboard. The man survived. He stayed in first class and payed alot more than the average. Entry 118 was a 24 year old man with no spouse and either a parent or a child onboard. This man also stayed in first class and payed a substantial amount. Entry 677 was a 36 year old man that payed a substantial amount (highest of all the passengers), stayed in first class. He had one parent or child on board and 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+DOWN MIGHT BE WRONG.
+The optimal model acording to us is the the some interaction model. While it still enjoys a rather large Pseudo R2 it furthermore boasts a low AIC and BIC. There was one model that enjoyed a higher Pseudo R2 than the decided optimal model, however it had plenty of interaction terms which made it more complex. Larger models tend to perform worse on the BIC. The relative increse in Pseudo R2 does not in this case compensagte for the increased complexity in the model, which can be seen in the Spike of the digaram. From the optimal, a backward selection is performed:
+
+
+Backward Selection:
+```{r}
+model.optimal <- glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic, family = "binomial")
+calc.metrics(optimal.model)
+
+```
+
+No change in removing any varible caused the Pseudo R2 to drop compared to the original model. Thus the optimal model reminas unchanged.  
+
+
+
+
 
 Analys kvar:
 - Pclass, kolla lite på (Axel)

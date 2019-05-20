@@ -1,0 +1,532 @@
+---
+title: "Predicting the burned area of a forest fire in northeastern Portugal"
+author: "Axel Sjöberg & John Rapp Farnes"
+date: "14 maj 2019"
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: 3
+  pdf_document:
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+    toc_depth: 3
+classoption: a4paper
+---
+
+```{r setup_knitr, include = FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  collapse = TRUE,
+  comment = "#>"
+)
+options(tinytex.verbose = TRUE)
+```
+
+```{r setup_pdf, eval = FALSE}
+# Install from CRAN
+install.packages('rmarkdown')
+# Render PDF
+install.packages("tinytex")
+tinytex::install_tinytex()  # install TinyTeX
+```
+
+```{r, code = readLines("lib.R")}
+```
+
+```{r, code = readLines("script.R")}
+```
+
+
+```{r}
+titanic <- read.csv("titanic.csv")
+titanic <- subset(titanic, select = -c(Name))
+colnames(titanic) <- c(
+  "survived",
+  "pclass",
+  "sex",
+  "age",
+  "siblings.spouses",
+  "parents.children",
+  "fare"
+)
+titanic
+```
+
+
+
+<!-- Abstract? -->
+
+# Introduction
+
+<!-- Syfte -->
+
+# Analysis
+
+```{r}
+ggpairs(titanic)
+```
+
+```{r}
+hist(titanic$fare)
+high.fare.passengers <- which(titanic$fare > 200)
+low.fare.passengers <- which(titanic$fare <= 0)
+titanic[high.fare.passengers,]
+titanic[low.fare.passengers,]
+length(high.fare.passengers)
+length(low.fare.passengers)
+```
+
+```{r}
+hist(titanic$parents.children)
+which(titanic$parents.children > 2)
+```
+
+
+```{r}
+# titanic <- titanic[-high.fare.passengers,]
+#   
+# hist(log(titanic$Fare))
+titanic$log.fare <- log(titanic$fare + 1)
+hist(titanic$log.fare)
+```
+
+```{r}
+hist(log(titanic[which(titanic$pclass == 1),]$fare + 1))
+hist(log(titanic[which(titanic$pclass == 2),]$fare + 1))
+hist(log(titanic[which(titanic$pclass == 3),]$fare + 1))
+```
+
+
+```{r}
+model.log.fare <- plot.binary.model(survived ~ log.fare, titanic, titanic$survived, titanic$log.fare, "log.fare", c(0, 500), 1)
+plot.binary.model(survived ~ siblings.spouses, titanic, titanic$survived, titanic$siblings.spouses, "siblings.spouses", c(0, 10), 40)
+plot.binary.model(survived ~ parents.children, titanic, titanic$survived, titanic$parents.children, "parents.children", c(0, 10), 40)
+plot.binary.model(survived ~ age, titanic, titanic$survived, titanic$age, "age", c(0, 80), 40)
+summary(model.log.fare)
+dataset <- titanic
+pR2(model.log.fare)["r2CU"]
+```
+
+
+
+## Survived vs age
+
+
+Age vs survived
+```{r}
+model.age <- plot.binary.model(survived ~ age, titanic, titanic$survived, titanic$age, "age", c(0, 80), 40)
+summary(model.age)
+dataset <- titanic
+pR2(model.age)["r2CU"]
+```
+
+Divide into age groups?
+- Children saved first
+- Mothers in certain age
+- Seniors not prioritized
+
+```{r}
+titanic$age.group.even <- cut(titanic$age, seq(0, 80, 10))
+cross.age.survive <- table(titanic$age.group.even, titanic$survived)
+freq.table.age.survive <- prop.table(cross.age.survive, 1)
+cbind(freq.table.age.survive, count = table(titanic$age.group.even))
+plot(freq.table.age.survive[,2])
+axis(1, at=1:nrow(freq.table.age.survive), rownames(freq.table.age.survive))
+```
+
+Good survival rate small children, then lower for young adults, higher for adults, low for seniors
+Little data on 50+, merge into one
+
+```{r}
+```
+
+
+```{r}
+titanic$age.group <- cut(titanic$age, c(0, 15, 30, 55, 100), labels = c("Child",  "Young adult", "Adult", "Senior"))
+titanic$age.group <- relevel(titanic$age.group, ref = "Adult")
+
+cross.age.survive <- table(titanic$age.group, titanic$survived)
+freq.table.age.survive <- prop.table(cross.age.survive, 1)
+cbind(freq.table.age.survive, count = table(titanic$age.group))
+plot(freq.table.age.survive[,2], xaxt = "n")
+axis(1, at=1:nrow(freq.table.age.survive), rownames(freq.table.age.survive))
+```
+
+Quite spread out
+
+```{r}
+table(titanic$age.group, titanic$parents.children)
+table(titanic$age.group, titanic$siblings.spouses)
+```
+
+Hard to distinquish children from parents and siblings from spouses
+
+Next, fit model
+
+```{r}
+model.age.group <- glm(survived ~ age.group, data = titanic, family = "binomial")
+(sum.age.group <- summary(model.age.group))
+```
+
+Significant
+
+Look at beta, OR and prob with confidence interval
+
+```{r}
+(confint.beta <- calc.confint.beta(model.age.group))
+(confint.OR <- exp(confint.beta))
+x0 <- data.frame(age.group = rownames(freq.table.age.survive))
+calc.pred.prob(model.age.group, x0)
+```
+
+
+Compare models, with fare
+
+
+```{r}
+models <- list(
+  glm(survived ~ age, data = titanic, family = "binomial"),
+  glm(survived ~ age.group, data = titanic, family = "binomial"),
+  glm(survived ~ age.group.even, data = titanic, family = "binomial"),
+  glm(survived ~ fare, data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1), data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1) + age, data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1) + age.group, data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1) + age.group.even, data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1) * age.group, data = titanic, family = "binomial")
+)
+model.names <- c(
+  "age",
+  "group",
+  "even",
+  "!log.fare",
+  "fare",
+  "fare + age",
+  "fare + group",
+  "fare + even",
+  "fare * group"
+)
+compare.models <- calc.metrics.models(models, model.names)
+compare.models
+```
+
+```{r, fig.width = 8}
+plot.compare.models(compare.models, c(1050, 1250))
+```
+
+Remove the worst
+```{r}
+models <- list(
+  glm(survived ~ log(fare + 1), data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1) + age, data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1) + age.group, data = titanic, family = "binomial"),
+  glm(survived ~ log(fare + 1) * age.group, data = titanic, family = "binomial")
+)
+model.names <- c(
+  "fare",
+  "fare + age",
+  "fare + group",
+  "fare * group"
+)
+compare.models <- calc.metrics.models(models, model.names)
+compare.models
+```
+
+```{r, fig.width = 8}
+plot.compare.models(compare.models, c(1050, 1120))
+```
+
+## Sex
+
+```{r}
+boxplot(log.fare ~ sex, data = titanic)
+boxplot(age ~ sex, data = titanic)
+cross.sex.survive <- table(titanic$sex, titanic$survived)
+cross.sex.survive
+prop.table(cross.sex.survive, 1)
+```
+
+Much higher percentage of women survived. Most women survived while most men did not
+No major differences in other factors
+
+```{r}
+titanic$sex <- relevel(titanic$sex, ref = "male")
+model.sex <- glm(survived ~ sex, data = titanic, family = "binomial")
+summary(model.sex)
+```
+```{r}
+(confint.beta <- calc.confint.beta(model.sex))
+(confint.OR <- exp(confint.beta))
+x0 <- data.frame(sex = rownames(cross.sex.survive))
+calc.pred.prob(model.sex, x0)
+```
+
+Compare models
+
+
+```{r}
+models <- list(
+  glm(survived ~ log.fare + age, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age.group, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age + sex, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age.group + sex, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass + siblings.spouses, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age.group + sex + pclass + siblings.spouses, data = titanic, family = "binomial")
+)
+titanic
+model.names <- c(
+  "f+a",
+  "f+ag",
+  "f+a+s",
+  "f+ag+s",
+  "f+ag+s+c",
+  "all",
+  "all interaction",
+  "some interaction",
+  "no parents",
+  "no parents, group"
+)
+compare.models <- calc.metrics.models(models, model.names)
+compare.models
+# models[[6]]
+# summary(models[[6]])
+```
+
+
+
+
+
+
+
+
+
+
+
+```{r, fig.width = 12}
+plot.compare.models(compare.models, c(750, 1100))
+
+```
+The three top performing models as can be seen in the digram above are: 
+
+All,
+
+All interaction,
+
+Some, interaction
+
+
+Down below, a comparison of the three models unfolds dadada.
+
+
+
+QQ-plot
+
+```{r}
+model.all <- glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children, data = titanic, family = "binomial")
+
+model.all.interaction <- glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic, family = "binomial")
+
+model.some.interaction <- glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic, family = "binomial")
+
+best.models <- list(
+  model.all,
+  model.all.interaction,
+  model.some.interaction
+)
+
+lapply(best.models, QQ)
+
+
+
+
+```
+
+model.all and model.all.interaction seem to be in best allignment with a normal distribution. model.some.interaction dont fall to short though, it only has more extreme points. In order to value the influence of outliers, Cook's distance plots for the three models are plotted below. 
+
+
+Cook's
+
+```{r}
+cook.plotter(model.all, titanic)
+
+sapply(best.models, cook.plotter, titanic)
+
+```
+
+
+
+
+
+
+
+
+
+
+DF-betas
+
+```{r}
+dfbeta.plot(model.all)
+dfbeta.plot(model.all.interaction)
+dfbeta.plot(model.some.interaction)
+
+```
+
+From the DFbeta plots it looks like the all.interaction has several issues. For the DFbeta.parents.children there are several points that are with quite the marignal above the horizontal lines. For the all model and the some.interaction model, The points in the plots are a lot more centered around the x axis, and the outliers are not as far away, (Fewer and closer). In the all.interaction model we want to look at the data entires that causes DF-beta values above 0.5. 
+
+
+
+```{r}
+dfb <- dfbetas(model.all.interaction)
+d.Intercept <- as.vector(dfb[,1])
+d.log.fare <- as.vector(dfb[,2])
+d.age <- as.vector(dfb[,3])
+d.sexfemale <- as.vector(dfb[,4])
+d.pclass <- as.vector(dfb[,5])
+d.siblings.spouses <- as.vector(dfb[,6])
+d.parents.children <- as.vector(dfb[,7])
+
+
+outlier.index1 <- which(d.Intercept > 0.5) #372
+(outlier.index2 <- which(d.log.fare > 0.5)) 
+(outlier.index3 <- which(d.age > 0.5))
+(outlier.index4 <- which(d.sexfemale > 0.5))
+(outlier.index5 <- which(d.pclass > 0.5))
+(outlier.index6 <- which(d.siblings.spouses > 0.5)) #503 
+(outlier.index7 <- which(d.parents.children > 0.5)) #97 118 677  (where    677 > 1) 
+
+
+
+
+
+```
+Entry 372 was a 22 year old man, alone, payed a substantial amount, stayed in first class and did not survive
+
+Entry 503 was an 18 year old man, had one sibling or spouse on board, payed a substantial amount, stayed in first class and did not survive. 
+
+entry 97 was a 23 year old man with no spouse and either a parent or a child onboard. The man survived. He stayed in first class and payed alot more than the average. 
+Entry 118 was a 24 year old man with no spouse and either a parent or a child onboard. This man also stayed in first class, payed a substantial amount and did not survive. 
+Entry 677 was a 36 year old man that payed a substantial amount (highest of all the passengers), stayed in first class. He had one parent or child on board and he survived. 
+
+Entry 677 seem especially problematic as it is so extreme. The dataentry is therefor removed and the models are refitted and eveluated once more. MOreover we try to remove the other dataetries that genreated a very large DFBeta for an of the varibles (< 0.5)
+
+
+
+```{r}
+titanic.altered <- titanic[-c(372),]
+best.models.altered <- list(
+  glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children, data = titanic.altered, family = "binomial"),
+  glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic.altered, family = "binomial"),
+  glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic.altered, family = "binomial")
+)
+best.names <- c(
+  "all",
+  "all interaction",
+  "some interaction"
+)
+
+(metrics.altered <- calc.metrics.models(best.models.altered, best.names))
+
+
+
+```
+
+No improvements when removing data entries with very large DF-Betas. The models only change marginally. No need to remove any data entries.  
+
+#WHICH IS THE BEST MODEL, HARD TO DECIDE 
+Backward Selection:
+
+
+No change in removing any varible caused the Pseudo R2 to drop compared to the original model. Thus the optimal model reminas unchanged.  
+
+
+
+------------------------
+
+Title: Modeling with concideration of company size. 
+
+In order to meassure the impact of the total size of the company, another varible was added to the titanic dataset: company.size. The covarite is the sum of parents.children and siblings.spouses. 
+
+```{r}
+titanic$company.size <- (titanic$siblings.spouses + titanic$parents.children)
+
+models <- list(
+  glm(survived ~ log.fare + age + sex + pclass, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass + company.size, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children + company.size, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children*company.size, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age * parents.children * siblings.spouses*company.size + sex + pclass, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass + company.size, data = titanic, family = "binomial")
+)
+model.names <- c(
+  "f+a+s+p",
+  "f+a+s+p+c",
+  "f+a+s+ss+pc",
+  "f+a+s+ss+pc+c",
+  "f*a*s*ss*pc",
+  "f*a*s*ss*pc*c",
+  "some interaction1",
+  "some interaction2",
+  "some interaction3"
+)
+compare.models <- calc.metrics.models(models, model.names)
+compare.models
+
+
+
+
+
+```
+Adding the covarite company.size offers no improvement in any of the models. 
+
+
+
+
+
+Analys kvar:
+- Pclass, kolla lite på (Axel)
+- sibling, parents etc, kolla lite på, jämföra med att slänga ihop (Axel)
+- is alone, kolla lite på (John)
+- Cooks distance mm
+
+Saker kvar:
+- PPT template och shell deck/outline över stor
+- Lägga till sense & spec till compare.models.plot
+
+Story:
+- Dataset, kvalitativt. Berätta lite om titanic
+- Syfte: hitta så bra modell som möjligt mätt på de här metrics. Med den göra predictions för de här personerna
+- Dataset, columner mm vad de betyder, tekniskt
+- Feature engineering
+  - Gå igenom alla features
+  - Lite plots, fits, modeller
+  - Hypoteser, försöka förklara resultat
+- Modeller och comparison
+  - Alla metrics, i.e AIC/BIC etc
+  - Utesluta modeller
+  - 2-3 key modeller, kolla etc
+- Optimala modellen
+  - Metrics
+  - Förklaring till varför den funkar
+  - Cooks etc
+- Resultat
+  - Metrics
+  - A/B
+  - Slide med de här personerna och deras survival rates
+
+Innan nästa vecka:
+  - John:
+    - Is alone analys
+    - PPT template med lite shell
+  - Axel
+    - Resterande analys: fare, siblings etc, Cooks distance
+    - Dataset, Syfte, Dataset (utkast)
+    - Börja på feature engineering
