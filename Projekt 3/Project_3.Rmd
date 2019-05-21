@@ -376,6 +376,36 @@ model.is.alone <- glm(survived ~ is.alone, data = titanic, family = "binomial")
 summary(model.is.alone)
 ```
 
+```{r}
+models <- list(
+  glm(survived ~ parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ siblings.spouses, data = titanic, family = "binomial"),
+  glm(survived ~ parents.children + siblings.spouses, data = titanic, family = "binomial"),
+  glm(survived ~ is.alone, data = titanic, family = "binomial")
+)
+
+model.names <- c(
+  "par/chil",
+  "sib/spou",
+  "par/chil+sib/spou",
+  "alone"
+)
+
+compare.models <- calc.metrics.models(models, model.names)
+# create.table.png(compare.models, "compare-fare-log")
+
+cbind("AIC" = round(compare.models$aic, 0),
+      "BIC" = round(compare.models$bic, 0),
+      "Sensitivity (%)" = round(compare.models$sensitivity * 100, 1),
+      "Specificity (%)" = round(compare.models$specificity * 100, 1),
+      "Pseudo R^2 (%)" = round(compare.models$PseudoR2 * 100, 1))
+
+```
+
+```{r, fig.width = 12}
+plot.compare.models(compare.models, c(1125, 1200))
+```
+
 
 
 # Pclass
@@ -391,6 +421,32 @@ round(prop.table(cross.pclass.survive, 1) * 100)
 ```{r}
 model.pclass <- glm(survived ~ pclass, data = titanic, family = "binomial")
 summary(model.pclass)
+```
+
+```{r}
+models <- list(
+  glm(survived ~ log.fare, data = titanic, family = "binomial"),
+  glm(survived ~ pclass, data = titanic, family = "binomial")
+)
+
+model.names <- c(
+  "log.fare",
+  "pclass"
+)
+
+compare.models <- calc.metrics.models(models, model.names)
+# create.table.png(compare.models, "compare-fare-log")
+
+cbind("AIC" = round(compare.models$aic, 0),
+      "BIC" = round(compare.models$bic, 0),
+      "Sensitivity (%)" = round(compare.models$sensitivity * 100, 1),
+      "Specificity (%)" = round(compare.models$specificity * 100, 1),
+      "Pseudo R^2 (%)" = round(compare.models$PseudoR2 * 100, 1))
+
+```
+
+```{r, fig.width = 12}
+plot.compare.models(compare.models, c(1070, 1120))
 ```
 
 # Compare models
