@@ -227,6 +227,50 @@ x0 <- data.frame(age.group = rownames(freq.table.age.survive))
 calc.pred.prob(model.age.group, x0)
 ```
 
+
+Comparing sole covariates
+
+```{r}
+
+
+
+sole.models <- list(
+  glm(survived ~ parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ siblings.spouses, data = titanic, family = "binomial"),
+  glm(survived ~ age.group, data = titanic, family = "binomial"),
+  glm(survived ~ age, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare, data = titanic, family = "binomial"),
+  glm(survived ~ pclass, data = titanic, family = "binomial"),
+  glm(survived ~ is.alone, data = titanic, family = "binomial"),
+  glm(survived ~ sex, data = titanic, family = "binomial")
+)
+
+
+sole.names <- c(
+  "parents.children",
+  "siblings.spouses",
+  "age group",
+  "age",
+  "fare",
+  "pclass",
+  "is.alone",
+  "sex"
+)
+
+(losmetricas <- calc.metrics.models(sole.models, sole.names))
+
+plot.compare.models(losmetricas, c(900, 1250))
+
+```
+
+
+
+
+
+
+
+
+
 ```{r}
 models <- list(
   glm(survived ~ age, data = titanic, family = "binomial"),
@@ -358,7 +402,7 @@ table(titanic$is.alone)
 rownames(cross.table) <- c("Not alone", "Alone")
 colnames(cross.table) <- c("Not survived", "Survived")
 
-create.table.png(cross.table, table.name = "is-alone_vs_survivors")
+#create.table.png(cross.table, table.name = "is-alone_vs_survivors")
 
 prop.table(cross.table, 1)
 prop.table(cross.table, 2)
@@ -398,36 +442,26 @@ summary(model.pclass)
 
 ```{r}
 models <- list(
-  glm(survived ~ log.fare + age, data = titanic, family = "binomial"),
-  glm(survived ~ log.fare + age.group, data = titanic, family = "binomial"),
-  glm(survived ~ log.fare + age + sex, data = titanic, family = "binomial"),
-  glm(survived ~ log.fare + age.group + sex, data = titanic, family = "binomial"),
-  glm(survived ~ log.fare + age + sex + pclass, data = titanic, family = "binomial"),
-  glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children, data = titanic, family = "binomial"),
-  glm(survived ~ log.fare + age + sex + pclass + is.alone, data = titanic, family = "binomial"),
-  glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic, family = "binomial"),
+  glm(survived ~ sex, data = titanic, family = "binomial"),
+  glm(survived ~ sex + age + pclass + log.fare + siblings.spouses + parents.children, data = titanic, family = "binomial"),
   glm(survived ~ log.fare * age * sex * pclass * is.alone, data = titanic, family = "binomial"),
-  glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic, family = "binomial"),
-  glm(survived ~ log.fare + age + sex + pclass + siblings.spouses, data = titanic, family = "binomial"),
-  glm(survived ~ log.fare + age.group + sex + pclass + siblings.spouses, data = titanic, family = "binomial")
+  glm(survived ~ log.fare * age * sex * pclass * is.alone * parents.children + siblings.spouses, data = titanic, family = "binomial"),
+  glm(survived ~ log.fare * age * sex * pclass * is.alone + parents.children + siblings.spouses, data = titanic, family = "binomial"),
+  glm(survived ~ pclass + age * sex + is.alone, data = titanic, family = "binomial"),
+  glm(survived ~ pclass * age * sex * is.alone, data = titanic, family = "binomial")
 )
 titanic
 model.names <- c(
-  "f+a",
-  "f+ag",
-  "f+a+s",
-  "f+ag+s",
-  "f+ag+s+c",
-  "all",
-  "all+alone",
-  "all interaction",
-  "all+alone interaction",
-  "some interaction",
-  "no parents",
-  "no parents, group"
+  "s",
+  "s+a+p+f+s+p.c",
+  "interaction some 1",
+  "interaction some 2",
+  "interaction some 3",
+  "John 1",
+  "John 2"
 )
-compare.models <- calc.metrics.models(models, model.names)
-compare.models
+(compare.models <- calc.metrics.models(models, model.names))
+
 # models[[6]]
 # summary(models[[6]])
 ```
