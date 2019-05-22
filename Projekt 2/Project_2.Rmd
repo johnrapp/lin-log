@@ -138,7 +138,7 @@ with(predx, {
 })
 
 ```
-As seen in figure \ref{fig:hicrm_higrads}, the kernel curve looks S-shaped, implying that a logistic model may be appropriate to describe the relationship. Further, the S-shape is "downward facing", implying a negative $\beta_{higrads}$, meaning that the probability of a county being classified as a high crime decreases when the amount of higrads in the county increases. Another thing to note in figure \ref{fig:hicrm_higrads} is how few data points exists with `higrads` below 60, meaning that significance is low in this region. In addition, looking at points with `higrads` over 60, the kernel curve and fitted line only cover about 30% - 70%, implying that `higrads` alone may not predict `hicrm` well.
+As seen in figure \ref{fig:hicrm_higrads}, the kernel curve looks S-shaped, implying that a logistic model may be appropriate to describe the relationship. Further, the S-shape is "downward facing", implying a negative $\beta_{higrads}$, meaning that the ∂ability of a county being classified as a high crime decreases when the amount of higrads in the county increases. Another thing to note in figure \ref{fig:hicrm_higrads} is how few data points exists with `higrads` below 60, meaning that significance is low in this region. In addition, looking at points with `higrads` over 60, the kernel curve and fitted line only cover about 30% - 70%, implying that `higrads` alone may not predict `hicrm` well.
 
 
 ### Fitted model and significance
@@ -820,6 +820,9 @@ abline(h = c(1, 4 / n), col = "red", lty = 2)
 Removing the problematic data entry from the CDI data frame, and refitting the optimal model resulted in a substantial improvement in the the Cook's distance plots. Comparing the Cook's distsance plots and resiudal plots without the problematic data entry generated relatively simlar plots as the figure \ref{fig:cooks_interaction}. The main difference was the largest two outliers in the figure \ref{tab:comparison_optimal_corrected}.
 
 
+
+
+ 
 
 ```{r}
 model.names <- c("Optimal", "Optimal excluding outlier")

@@ -228,40 +228,6 @@ calc.pred.prob(model.age.group, x0)
 ```
 
 
-Comparing sole covariates
-
-```{r}
-
-
-
-sole.models <- list(
-  glm(survived ~ parents.children, data = titanic, family = "binomial"),
-  glm(survived ~ siblings.spouses, data = titanic, family = "binomial"),
-  glm(survived ~ age.group, data = titanic, family = "binomial"),
-  glm(survived ~ age, data = titanic, family = "binomial"),
-  glm(survived ~ log.fare, data = titanic, family = "binomial"),
-  glm(survived ~ pclass, data = titanic, family = "binomial"),
-  glm(survived ~ is.alone, data = titanic, family = "binomial"),
-  glm(survived ~ sex, data = titanic, family = "binomial")
-)
-
-
-sole.names <- c(
-  "parents.children",
-  "siblings.spouses",
-  "age group",
-  "age",
-  "fare",
-  "pclass",
-  "is.alone",
-  "sex"
-)
-
-(losmetricas <- calc.metrics.models(sole.models, sole.names))
-
-plot.compare.models(losmetricas, c(900, 1250))
-
-```
 
 
 
@@ -533,21 +499,27 @@ Down below, a comparison of the three models unfolds dadada.
 QQ-plot
 
 ```{r}
-model.all <- glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children, data = titanic, family = "binomial")
+model.no.parents <- glm(survived ~ sex + log.fare + age + pclass + siblings.spouses, data = titanic, family = "binomial")
 
-model.all.interaction <- glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic, family = "binomial")
-
-model.some.interaction <- glm(survived ~ log.fare + age * parents.children * siblings.spouses + sex + pclass, data = titanic, family = "binomial")
+model.interaction <- glm(survived ~ log.fare * age * sex * is.alone * pclass, data = titanic, family = "binomial")
 
 best.models <- list(
-  model.all,
-  model.all.interaction,
-  model.some.interaction
+  model.no.parents,
+  model.interaction
 )
 
-lapply(best.models, qq)
+names <- c(
+  "no parents",
+  "interaction"
+)
+
+(mertic <- calc.metrics.models(best.models, names))
 
 
+
+
+qq(model.no.parents, "no parents QQ", "Theoretical Quantiles", "Sample Quantiles")
+qq(model.interaction, "interaction QQ", "Theoretical Quantiles", "Sample Quantiles")
 
 
 ```
@@ -558,73 +530,108 @@ model.interaction.some seem to be in best allignment with a normal distribution.
 Cook's
 
 ```{r}
-cook.plotter(model.all, titanic)
+cook.plotter(model.no.parents, titanic, "Cook's distance against the liner predictor - No Parents")
+cook.plotter(model.interaction, titanic, "Cook's distance against the liner predictor - Interaction")
 
-sapply(best.models, cook.plotter, titanic)
 
 ```
 
 DF-betas
 
 ```{r}
-# dfbeta.plot(model.all)
-# dfbeta.plot(model.all.interaction)
-# dfbeta.plot(model.some.interaction)
+dfbeta.plot(model.no.parents, titanic, 0)
+dfbeta.plot(model.interaction, titanic, 1)
+
 
 ```
 
-From the DFbeta plots it looks like the all.interaction has several issues. For the DFbeta.parents.children there are several points that are with quite the marignal above the horizontal lines. For the all model and the some.interaction model, The points in the plots are a lot more centered around the x axis, and the outliers are not as far away, (Fewer and closer). In the all.interaction model we want to look at the data entires that causes DF-beta values above 0.5. 
+From the DFbeta plots it looks like the all.interaction has several issues. For the DFbeta.parents.children there are several points that are with quite the marignal above the horizontal lines. For the all model and the some.interaction model, The points in the plots are a lot more centered around the x axis, and the outliers are not as far away, (Fewer and closer). In the all.interaction model we want to look at the data entires that causes DF-beta values above 0.5. ## <--- change
 
 
+Outliers for the no parents 
+```{r}
+dfb1 <- dfbetas(model.no.parents)
+
+#dfb
+d1.Intercept <- as.vector(dfb1[,1])
+d1.log.fare <- as.vector(dfb1[,2])
+d1.age <- as.vector(dfb1[,3])
+d1.sexfemale <- as.vector(dfb1[,4])
+d1.pclass <- as.vector(dfb1[,5])
+d1.siblings.spouses <- as.vector(dfb1[,6])
+
+n = 2 / sqrt(nrow(titanic))
+
+
+(outlier.index1a <- which(abs(d1.Intercept) > n))
+(outlier.index2a <- which(abs(d1.log.fare) > n)) 
+(outlier.index3a <- which(abs(d1.age) > n))
+(outlier.index4a <- which(abs(d1.sexfemale) > n))
+(outlier.index5a <- which(abs(d1.pclass) > n))
+(outlier.index6a <- which(abs(d1.siblings.spouses) > n))  
+
+
+outlier.index1 <- c(outlier.index1a, outlier.index2a, outlier.index3a, outlier.index4a, outlier.index5a, outlier.index6a)
+(outlier.index1 <- unique(outlier.index1))
+
+
+```
+
+
+
+
+Outliers for the interaction 
+```{r}
+dfb2 <- dfbetas(model.interaction)
+#dfb
+d.Intercept2 <- as.vector(dfb2[,1])
+d.log.fare2 <- as.vector(dfb2[,2])
+d.age2 <- as.vector(dfb2[,3])
+d.sexfemale2 <- as.vector(dfb2[,4])
+d.is.alone <- as.vector(dfb2[,5])
+d.pclass2 <- as.vector(dfb2[,6])
+d.pclass3 <- as.vector(dfb2[,7])
+d.siblings.spouses2 <- as.vector(dfb2[,6])
+
+n = 2 / sqrt(nrow(titanic))
+
+
+(outlier.index1b <- which(abs(d.Intercept2) > n))
+(outlier.index2b <- which(abs(d.log.fare2) > n)) 
+(outlier.index3b <- which(abs(d.age2) > n))
+(outlier.index4b <- which(abs(d.sexfemale2) > n))
+(outlier.index5b <- which(abs(d.pclass2) > n))
+
+outlier.index2b <- c(outlier.index1b, outlier.index2b, outlier.index3b, outlier.index4b, outlier.index5b)
+(outlier.index2b <- unique(outlier.index2b))
+
+out <- which(abs(dfb2) > 0.5)
+
+out 
+```
+
+
+
+
+
+
+
+
+
+
+Cook's outliers 
 
 ```{r}
-dfb <- dfbetas(model.all.interaction)
-#dfb
-d.Intercept <- as.vector(dfb[,1])
-d.log.fare <- as.vector(dfb[,2])
-d.age <- as.vector(dfb[,3])
-d.sexfemale <- as.vector(dfb[,4])
-d.pclass <- as.vector(dfb[,5])
-d.siblings.spouses <- as.vector(dfb[,6])
-d.parents.children <- as.vector(dfb[,7])
-d.log.fare
-
-outlier.index1 <- which(d.Intercept > 0.5) #372
-(outlier.index2 <- which(d.log.fare > 0.5)) 
-(outlier.index3 <- which(d.age > 0.5))
-(outlier.index4 <- which(d.sexfemale > 0.5))
-(outlier.index5 <- which(d.pclass > 0.5))
-(outlier.index6 <- which(d.siblings.spouses > 0.5)) #503 
-(outlier.index7 <- which(d.parents.children > 0.5)) #97 118 677  (where    677 > 1) 
-
-
-
-
-
+cooks <- cooks.distance(model.interaction)
+outliers.cooks <- which(cooks > 1)
+outlier.cooks
 ```
-Entry 372 was a 22 year old man, alone, payed a substantial amount and stayed in first class. 
-
-Entry 503 was an 18 year old man, had one sibling or spouse on board, payed a substantial amount and stayed in first class
-
-entry 97 was a 23 year old man with no spouse and either a parent or a child onboard. The man survived. He stayed in first class and payed alot more than the average. Entry 118 was a 24 year old man with no spouse and either a parent or a child onboard. This man also stayed in first class and payed a substantial amount. Entry 677 was a 36 year old man that payed a substantial amount (highest of all the passengers), stayed in first class. He had one parent or child on board and 
 
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-DOWN MIGHT BE WRONG.
-The optimal model acording to us is the the some interaction model. While it still enjoys a rather large Pseudo R2 it furthermore boasts a low AIC and BIC. There was one model that enjoyed a higher Pseudo R2 than the decided optimal model, however it had plenty of interaction terms which made it more complex. Larger models tend to perform worse on the BIC. The relative increse in Pseudo R2 does not in this case compensagte for the increased complexity in the model, which can be seen in the Spike of the digaram. From the optimal, a backward selection is performed:
 
 
 Backward Selection:
@@ -633,6 +640,28 @@ optimal.model <- glm(survived ~ log.fare + age * parents.children * siblings.spo
 calc.metrics(optimal.model)
 
 ```
+
+```{r}
+liz <- data.frame(sex = "female", log.fare =4.11, age= 32, siblings.spouses = 1, pclass = "2")
+calc.pred.prob(model.no.parents, liz)
+
+jack <- data.frame(sex = "male", log.fare =2.77, age= 19, siblings.spouses = 0, pclass = "3")
+calc.pred.prob(model.no.parents, jack)
+
+
+rose <- data.frame(sex = "female", log.fare =5.3, age= 17, siblings.spouses = 1, pclass = "1")
+calc.pred.prob(model.no.parents, rose)
+
+
+albert <- data.frame(sex = "male", log.fare =5.3, age= 4, siblings.spouses = 0, pclass = "3")
+calc.pred.prob(model.no.parents, albert)
+
+molly <- data.frame(sex = "female", log.fare =4.39, age= 60, siblings.spouses = 1, pclass = "1")
+calc.pred.prob(model.no.parents, molly)
+
+
+```
+
 
 No change in removing any varible caused the Pseudo R2 to drop compared to the original model. Thus the optimal model reminas unchanged.  
 

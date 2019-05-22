@@ -145,7 +145,7 @@ plot.compare.models <- function(compare.models, axis.range) {
     mtext("Percent", side=4, line=3)
     
     legend("topright", legend=c("BIC", "AIC", "Pseudo R^2", "Specificity", "Sensitivity"),
-           text.col=c("red","red", "blue", "green", "green"), lty=c(1, 2, 1, 2, 1),col=c("red","red", "blue", "green", "green"))
+           text.col=c("red","red", "blue", "green", "green"), lty=c(1, 2, 1, 2, 1),col=c("red","red", "blue", "green", "green"), cex = 2)
   })
 }
 
@@ -168,7 +168,7 @@ calc.pred.prob <- function(model, x0) {
 }
 
 
-qq <- function(model) {
+qq <- function(model, main, x, y) {
   model.plot <- model
   influence.plot <- influence(model)
   
@@ -177,7 +177,7 @@ qq <- function(model) {
   r <- influence.plot$pear.res / sqrt(1 - influence.plot$hat)
   ds <- influence.plot$dev.res / sqrt(1 - influence.plot$hat)
   
-  qqnorm(r)
+  plot(qqnorm(r), main = main, xlab = x, ylab = y)
   qqline(r)
 }
 
@@ -185,13 +185,13 @@ QQtable <- function(models) {
    table <- lapply(models, QQ)
 }
 
-cook.plotter <- function(model, dataset) {
+cook.plotter <- function(model, dataset, m) {
   n <- nrow(dataset)
   data <- dataset
   cook.plot <- cooks.distance(model)
   xb <- predict(model)
   
-  with(data, plot(cook.plot ~ xb, ylab = "Cook's distance"))
+  with(data, plot(cook.plot ~ xb, ylab = "Cook's distance", main = m))
   abline(h = c(1, 4 / n), col = "red", lty = 2)
 }
 
@@ -200,7 +200,7 @@ cooks.plots <- function(models) {
   
 }
 
-dfbeta.plot <- function(model, dataset, f) {
+dfbeta.plot <- function(model, dataset, i.a) {
   n <- nrow(dataset)
   xb <- predict(model)
   dfb <- dfbetas(model)
@@ -208,20 +208,27 @@ dfbeta.plot <- function(model, dataset, f) {
   plot(dfb[, "(Intercept)"] ~ xb, ylim = c(-1, 1), main = "DFbeta.Intercept")
   abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
   
-  if(f == 1) {
-    plot(dfb[, "log.fare"] ~ xb, ylim = c(-1, 1), main = "DFbeta.log.fare")
-    abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
-  } 
+  # if(pc == 1) {
+  #   plot(dfb[, "log.fare"] ~ xb, ylim = c(-1, 1), main = "DFbeta.log.fare")
+  #   abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
+  # } 
   plot(dfb[, "age"] ~ xb, ylim = c(-1, 1), main = "DFbeta.age")
   abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
   plot(dfb[, "sexfemale"] ~ xb, ylim = c(-1, 1), main = "DFbeta.sex.female")
   abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
-  plot(dfb[, "pclass"] ~ xb, ylim = c(-1, 1), main = "DFbeta.pclass")
+  plot(dfb[, "pclass2"] ~ xb, ylim = c(-1, 1), main = "DFbeta.pclass2")
   abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
-  plot(dfb[, "siblings.spouses"] ~ xb, ylim = c(-1, 1), main = "DFbeta.siblings.spouses")
+  plot(dfb[, "pclass3"] ~ xb, ylim = c(-1, 1), main = "DFbeta.pclass3")
   abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
-  plot(dfb[, "parents.children"] ~ xb, ylim = c(-1, 1), main = "DFbeta.parents.children")
-  abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
+  if(i.a == 0) {
+    plot(dfb[, "siblings.spouses"] ~ xb, ylim = c(-1, 1), main = "DFbeta.siblings.spouses")
+    abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
+  }
+  if(i.a == 1) {
+    plot(dfb[, "is.alone"] ~ xb, ylim = c(-1, 1), main = "is.alone")
+    abline(h = c(-1, -2/sqrt(n), 0, 1, 2 / sqrt(n)), col = "red", lty = 3)
+  }
+  
 }
 
 create.table.png <- function(table, table.name) {
