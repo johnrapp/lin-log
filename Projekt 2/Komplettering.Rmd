@@ -1,0 +1,83 @@
+---
+title: "Komplettering projekt 2"
+author: "Axel Sjöberg & John Rapp"
+date: "24 maj 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r init_vars, include = FALSE}
+library(ggplot2)
+library(knitr)
+library(dplyr)
+library(purrr)
+library(pscl)
+library(GGally)
+
+cdi <- read.delim("CDI.txt")
+ 
+region.names <- c("Northeast", "Midwest", "South", "West")
+cdi$region <- factor(cdi$region, levels = c(1, 2, 3, 4),
+                     labels = region.names)
+  
+cdi$crm1000 <- 1000 * cdi$crimes / cdi$popul
+cdi$phys1000 = 1000 * cdi$phys / cdi$popul
+
+
+median = summary(cdi$crm1000)["Median"]
+
+cdi <- cbind(cdi, hicrm = ifelse(cdi$crm1000 < median, 0, 1))
+```
+
+```{r}
+model.higrads <- glm(hicrm ~ higrads, data = cdi, family = "binomial")
+sum <- summary(model.higrads)
+
+coeff.beta <- model.higrads$coefficients
+
+ci.beta <- suppressMessages(confint(model.higrads))
+
+beta.p <- sum$coefficients[, "Pr(>|z|)"]
+or.higrads <- cbind(OR = exp(coeff.beta["higrads"]), exp(ci.beta))[2, ]
+
+# Odds decreases by ~5% on 1% increase in higrads
+1 - or.higrads
+
+# Odds decreases by ~40% on 10% increase in higrads
+1 - or.higrads^10
+```
+
+
+```{r}
+model.region <- glm(hicrm ~ region, data = cdi, family = "binomial")
+
+model.0 <- update(model.region, . ~ 1)
+model.south <- update(model.0, . ~ I(region != "South"))
+model.northeast <- update(model.0, . ~ I(region != "Northeast"))
+model.midwest <- update(model.0, . ~ I(region != "Midwest"))
+model.west <- update(model.0, . ~ I(region != "West"))
+model.full <- model.region
+
+cbind(AIC(model.0, model.south, model.northeast, model.midwest, model.west, model.full),
+      BIC(model.0, model.south, model.northeast, model.midwest, model.west, model.full))
+
+anova.south <- anova(model.0, model.south)
+anova.northeast <- anova(model.0, model.northeast)
+anova.midwest <- anova(model.0, model.midwest)
+anova.west <- anova(model.0, model.west)
+
+
+data.frame(
+  region = c("South", "Northeast", "Midwest", "West"),
+  df = c(anova.south$Df[2], anova.northeast$Df[2], anova.midwest$Df[2], anova.west$Df[2]),
+  dev = c(anova.south$Deviance[2], anova.northeast$Deviance[2], anova.midwest$Deviance[2], anova.west$Deviance[2]),
+  chisq = c(qchisq(1 - 0.05, anova.south$Df[2]), qchisq(1 - 0.05, anova.northeast$Df[2]), qchisq(1 - 0.05, anova.midwest$Df[2]), qchisq(1 - 0.05, anova.west$Df[2]))
+)
+
+```
+
+All are significant!
