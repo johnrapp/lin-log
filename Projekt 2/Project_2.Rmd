@@ -163,7 +163,7 @@ kable(table.beta.ci, caption = table.caption, digits = c(rep(2,3), 5))
 ```
 
 ```{r beta_decrease, include = F}
-or.higrads <- exp(coeff.beta["higrads"])
+or.higrads <- cbind(OR = exp(coeff.beta["higrads"]), exp(ci.beta))[2, ]
 
 decrease.one.percent <- 1 - or.higrads
 decrease.ten.percent <- 1 - or.higrads^10
@@ -177,7 +177,7 @@ decrease.ten.percent
 ```
 
 
-As seen in the table 2, all of the P-values are < 0.05, meaning both that conties with no `higrads` has greater than 0 probability of having a high crime rate, and that `higrads` has a statistically significant effect on `hicrm`. This effect can be measured by looking at $e^{\beta_{higrads}}$, showing that an increase of 1% in `higrads` decreases odds of `hicrm` by `r display.percent(decrease.one.percent)`%, while an increase of 10% decreases odds of by `r display.percent(decrease.ten.percent)`%.
+As seen in the table 2, all of the P-values are < 0.05, meaning both that conties with no `higrads` has greater than 0 probability of having a high crime rate, and that `higrads` has a statistically significant effect on `hicrm`. This effect can be measured by looking at $e^{\beta_{higrads}}$, showing that an increase of 1% in `higrads` decreases odds of `hicrm` by `r display.percent(decrease.one.percent[1])`% (confidence interval [`r display.percent(decrease.one.percent[2])`%, `r display.percent(decrease.one.percent[3])`%]), while an increase of 10% decreases odds of by `r display.percent(decrease.ten.percent[1])`% (confidence interval [`r display.percent(decrease.ten.percent[2])`%, `r display.percent(decrease.ten.percent[3])`%]).
 
 ### Model predictions
 
