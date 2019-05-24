@@ -429,16 +429,15 @@ Down below, a comparison of the three models unfolds dadada.
 QQ-plot
 
 ```{r}
-model.all <- glm(survived ~ log.fare + age + sex + pclass + siblings.spouses + parents.children, data = titanic, family = "binomial")
+model.no.parents <- glm(survived ~ log.fare + age + sex + pclass + siblings.spouses, data = titanic, family = "binomial")
 
-model.all.interaction <- glm(survived ~ log.fare * age * sex * pclass * siblings.spouses * parents.children, data = titanic, family = "binomial")
+model.interaction <- glm(survived ~ log.fare * age * sex * pclass * is.alone, data = titanic, family = "binomial")
 
-model.some.interaction <- glm(survived ~ age * parents.children * siblings.spouses * pclass * sex, data = titanic, family = "binomial")
+
 
 best.models <- list(
-  model.all,
-  model.all.interaction,
-  model.some.interaction
+  model.no.parents,
+  model.interaction
 )
 
 lapply(best.models, QQ)
@@ -455,7 +454,10 @@ Cook's
 
 ```{r}
 
-sapply(best.models, cook.plotter, titanic)
+
+
+cook.plotter(model.no.parents, titanic, "Cook's distance no parents")
+cook.plotter(model.interaction, titanic, "Cook's distance interaction")
 
 ```
 
@@ -471,7 +473,7 @@ sapply(best.models, cook.plotter, titanic)
 DF-betas
 
 ```{r}
-dfbeta.plot(model.all, titanic, 1)
+dfbeta.plot(model, titanic, 1)
 dfbeta.plot(model.all.interaction, titanic, 1)
 dfbeta.plot(model.some.interaction, titanic, 0)
 
@@ -536,7 +538,161 @@ best.names <- c(
 
 ```
 
-No improvements when removing data entries with very large DF-Betas. The models only change marginally. No need to remove any data entries.  
+```{r}
+c <- cooks.distance(model.interaction)
+interaction.outliers <- which(c > 0.02)
+
+interaction.outliers
+titanic.altered <- titanic[-c(interaction.outliers),]
+  
+model.interaction.altered <- glm(survived ~ log.fare * age * sex * pclass * is.alone, data = titanic.altered, family = "binomial")
+
+(calc.metrics(model.interaction.altered))
+(calc.metrics(model.interaction))
+
+```
+
+
+
+
+```{r}
+dfbeta.plot(model.interaction, titanic, 1)
+dfbeta.plot(model.interaction.altered, titanic, 1)
+
+```
+
+
+
+
+
+
+
+No improvements when removing data entries with very large DF-Betas. The models only change marginally. No need to remove any data entries. 
+
+
+RESIDUAL ANALYSIS 
+
+
+``` {r}
+model.plot <- model.interaction
+influence.plot <- influence(model.plot)
+  
+xb <- predict(model.plot)
+
+r <- influence.plot$pear.res / sqrt(1 - influence.plot$hat)
+ds <- influence.plot$dev.res / sqrt(1 - influence.plot$hat)
+
+qqnorm(r)
+qqline(r)
+````
+
+```{r, out.extra = '', fig.pos = "h", fig.width = 8, fig.height = 8, fig.cap="\\label{fig:residuals_interaction}Standardized Pearson residuals as well as standardized deviance residuals for the interaction model, against the linear predictor $X\\beta$"}
+par(mfrow = c(3, 1))
+
+with(titanic, plot(r ~ xb, ylab = "Squared Pearson residuals", main = "Standardized Pearson residuals against linear predictor"))
+abline(h = c(-2, 0, 2), col = "red", lty = 3)
+
+with(titanic, plot(r^2 ~ xb, ylab = "Squared Pearson residuals", main = "Squared standardized Pearson residuals against linear predictor"))
+abline(h = c(0, 4), col = "red", lty = 3)
+
+with(titanic, plot(ds ~ xb, ylab = "Deviance residuals", main = "Standardized deviance residuals against linear predictor"))
+abline(h = c(-2, 0, 2), col = "red", lty = 3)
+```
+
+
+
+``` {r}
+model.plot2 <- model.interaction.altered
+influence.plot2 <- influence(model.plot2)
+  
+xb2 <- predict(model.plot2)
+
+r2 <- influence.plot2$pear.res / sqrt(1 - influence.plot2$hat)
+ds2 <- influence.plot2$dev.res / sqrt(1 - influence.plot2$hat)
+
+
+par(mfrow = c(3, 1))
+
+with(titanic.altered, plot(r2 ~ xb2, ylab = "Squared Pearson residuals", main = "Standardized Pearson residuals against linear predictor"))
+abline(h = c(-2, 0, 2), col = "red", lty = 3)
+
+with(titanic.altered, plot(r2^2 ~ xb2, ylab = "Squared Pearson residuals", main = "Squared standardized Pearson residuals against linear predictor"))
+abline(h = c(0, 4), col = "red", lty = 3)
+
+with(titanic.altered, plot(ds2 ~ xb2, ylab = "Deviance residuals", main = "Standardized deviance residuals against linear predictor", ylim = c(-3,3) ))
+abline(h = c(-2, 0, 2), col = "red", lty = 3)
+
+
+
+````
+
+
+
+``` {r}
+model.plot3 <- model.no.parents
+influence.plot3 <- influence(model.plot3)
+  
+xb3 <- predict(model.plot3)
+
+r3 <- influence.plot3$pear.res / sqrt(1 - influence.plot3$hat)
+ds3 <- influence.plot3$dev.res / sqrt(1 - influence.plot3$hat)
+
+
+par(mfrow = c(3, 1))
+
+with(titanic, plot(r3 ~ xb3, ylab = "Squared Pearson residuals", main = "Standardized Pearson residuals against linear predictor"))
+abline(h = c(-2, 0, 2), col = "red", lty = 3)
+
+with(titanic, plot(r3^2 ~ xb3, ylab = "Squared Pearson residuals", main = "Squared standardized Pearson residuals against linear predictor"))
+abline(h = c(0, 4), col = "red", lty = 3)
+
+with(titanic, plot(ds3 ~ xb3, ylab = "Deviance residuals", main = "Standardized deviance residuals against linear predictor", ylim = c(-3,3) ))
+abline(h = c(-2, 0, 2), col = "red", lty = 3)
+
+
+
+````
+
+
+```{r}
+residual.outlier <- which(abs(r) > 4)
+
+residual.outlier
+
+```
+
+
+FOR THE INTERACTION
+[199] KEEP
+[266] KEEP
+[270] REMOVE
+[311] KEEP
+[496] KEEP
+[541] KEEP
+
+
+FOR NO PARENTS 
+[260] 3 year old male traveling with 4 siblings and residing in pclass = 3. 
+remove [270] !
+[296] 2 year old girl who paid 151 £ and resided in pclass = 1 who did not survive
+[337] 45 year old male in third class, traveling solo, who survived
+[413] 44 -||-
+[496] 25 year old woman travling with a spouse or sibling, payed 151 £ and resided in first class.
+
+
+Removing entry 270
+
+```{r}
+titanic <- titanic[-(270),]
+
+```
+
+
+
+
+
+
+
 
 #WHICH IS THE BEST MODEL, HARD TO DECIDE 
 Backward Selection:
@@ -586,6 +742,8 @@ compare.models
 
 ```
 Adding the covarite company.size offers no improvement in any of the models. 
+
+
 
 
 
