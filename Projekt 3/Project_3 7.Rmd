@@ -52,6 +52,7 @@ colnames(titanic) <- c(
   "fare"
 )
 titanic$pclass <- factor(titanic$pclass, levels = c(1,2,3))
+titanic$sex <- relevel(titanic$sex, ref = "male")
 
 titanic
 ```
@@ -611,15 +612,6 @@ entry 97 was a 23 year old man with no spouse and either a parent or a child onb
 
 
 
-
-
-
-
-
-
-
-
-
 DOWN MIGHT BE WRONG.
 The optimal model acording to us is the the some interaction model. While it still enjoys a rather large Pseudo R2 it furthermore boasts a low AIC and BIC. There was one model that enjoyed a higher Pseudo R2 than the decided optimal model, however it had plenty of interaction terms which made it more complex. Larger models tend to perform worse on the BIC. The relative increse in Pseudo R2 does not in this case compensagte for the increased complexity in the model, which can be seen in the Spike of the digaram. From the optimal, a backward selection is performed:
 
@@ -631,34 +623,29 @@ calc.metrics(optimal.model)
 
 ```
 
-No change in removing any varible caused the Pseudo R2 to drop compared to the original model. Thus the optimal model reminas unchanged.  
+#Optimal model
+```{r}
+optimal.model <- glm(survived ~ sex + log.fare + age + pclass + siblings.spouses, data = titanic, family = "binomial")
+(sum <- summary(optimal.model))
+calc.metrics(optimal.model)
 
-Story:
-- Dataset, kvalitativt. Berätta lite om titanic
-- Syfte: hitta så bra modell som möjligt mätt på de här metrics. Med den göra predictions för de här personerna
-- Dataset, columner mm vad de betyder, tekniskt
-- Feature engineering
-  - Gå igenom alla features
-  - Lite plots, fits, modeller
-  - Hypoteser, försöka förklara resultat
-- Modeller och comparison
-  - Alla metrics, i.e AIC/BIC etc
-  - Utesluta modeller
-  - 2-3 key modeller, kolla etc
-- Optimala modellen
-  - Metrics
-  - Förklaring till varför den funkar
-  - Cooks etc
-- Resultat
-  - Metrics
-  - A/B
-  - Slide med de här personerna och deras survival rates
+coeff <- sum$coefficients[, "Estimate"]
 
-John:
-- Is alone analys
-- Lägga till sense och spec i grafer
-- Fortsätta på deck
-- Dela upp i A/B
-Axel
-- Dataset, Syfte, Dataset (utkast)
-- Börja på feature engineering
+impact <- data.frame(
+  female = coeff[2],
+  fare = coeff[3]*median(titanic$log.fare),
+  age = coeff[4]*median(titanic$age),
+  pclass2 = coeff[5],
+  pclass3 = coeff[6],
+  siblings.spouses = coeff[7]*mean(titanic$siblings.spouses)
+)
+
+abs(impact$fare / impact$female)
+abs(impact$age / impact$female)
+abs(impact$pclass2 / impact$female)
+abs(impact$pclass3 / impact$female)
+abs(impact$siblings.spouses / impact$female)
+
+
+
+```
