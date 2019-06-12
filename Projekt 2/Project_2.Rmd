@@ -268,6 +268,10 @@ cdi$region <- relevel(cdi$region, ref = reference.level)
 
 ```
 
+
+
+
+
 As a reference region, the one that has the largest number of counties in it’s smallest low/high category was chosen. As a tie-breaker, the other low/high category was used. This approach produces the lowest standard error, and therefore highest significance. As seen in table \ref{tab:cross-tabulation}, the above given condition resulted in choosing `r reference.level` as the reference region.
 
 
