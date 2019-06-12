@@ -3,15 +3,15 @@ title: "Project 2"
 author: "Axel Sjöberg (ax3817sj-s) & John Rapp Farnes (jo5113fa-s)"
 date: "16 maj 2019"
 output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '3'
   pdf_document:
     fig_caption: yes
     number_sections: yes
     toc: yes
     toc_depth: 3
-  html_document:
-    df_print: paged
-    toc: yes
-    toc_depth: '3'
 classoption: a4paper
 ---
 
@@ -163,7 +163,7 @@ kable(table.beta.ci, caption = table.caption, digits = c(rep(2,3), 5))
 ```
 
 ```{r beta_decrease, include = F}
-or.higrads <- exp(coeff.beta["higrads"])
+or.higrads <- cbind(OR = exp(coeff.beta["higrads"]), exp(ci.beta))[2, ]
 
 decrease.one.percent <- 1 - or.higrads
 decrease.ten.percent <- 1 - or.higrads^10
@@ -177,7 +177,7 @@ decrease.ten.percent
 ```
 
 
-As seen in the table 2, all of the P-values are < 0.05, meaning both that conties with no `higrads` has greater than 0 probability of having a high crime rate, and that `higrads` has a statistically significant effect on `hicrm`. This effect can be measured by looking at $e^{\beta_{higrads}}$, showing that an increase of 1% in `higrads` decreases odds of `hicrm` by `r display.percent(decrease.one.percent)`%, while an increase of 10% decreases odds of by `r display.percent(decrease.ten.percent)`%.
+As seen in the table 2, all of the P-values are < 0.05, meaning both that conties with no `higrads` has greater than 0 probability of having a high crime rate, and that `higrads` has a statistically significant effect on `hicrm`. This effect can be measured by looking at $e^{\beta_{higrads}}$, showing that an increase of 1% in `higrads` decreases odds of `hicrm` by `r display.percent(decrease.one.percent[1])`% (confidence interval [`r display.percent(decrease.one.percent[2])`%, `r display.percent(decrease.one.percent[3])`%]), while an increase of 10% decreases odds of by `r display.percent(decrease.ten.percent[1])`% (confidence interval [`r display.percent(decrease.ten.percent[2])`%, `r display.percent(decrease.ten.percent[3])`%]).
 
 ### Model predictions
 
@@ -305,6 +305,12 @@ kable(table.beta.ci, caption = table.caption, digits = c(rep(2,3), 3))
 
 As may be seen in table \ref{tab:region_beta}, the P-value for $\beta_{West}$ was > 0.05, indicating a lack of statistical significance in the difference between how South and West predicts `hicrm`.
 
+```{r}
+
+anova(model.region)
+```
+
+
 Next, the odds-ratios for the different categories were determined. The odds-ratios measure the odds of a particular category in relation to the reference category. These may be calculated as $OR_i = e^{\beta_i}$ and are presented in table \ref{tab:region_OR}.
 
 
@@ -322,7 +328,30 @@ kable(table.beta.ci, caption = table.caption, digits = 2)
 
 ```
 
-As seen in table \ref{tab:region_OR}, the odds-ratios were less than 1 for all categories but the reference region. This implies that the odds for all regions are lower compared to the reference region, i.e. that the probability of a high crime rate is lower in all regions compared to the reference region. This is however not statistically significant as the confidence interval for the western region's odds ratio, in relation to the refernce category, cover 1. This coincides with the findings in table  \ref{tab:region_beta} where the $\beta_{West}$ P-value was > 0.05. 
+As seen in table \ref{tab:region_OR}, the odds-ratios were less than 1 for all categories but the reference region. This implies that the odds for all regions are lower compared to the reference region, i.e. that the probability of a high crime rate is lower in all regions compared to the reference region. This is however not statistically significant as the confidence interval for the western region's odds ratio, in relation to the refernce category, cover 1. This coincides with the findings in table \ref{tab:region_beta} where the $\beta_{West}$ P-value was > 0.05. 
+
+```{r, echo=T}
+model.0 <- update(model.region, . ~ 1)
+model.south <- update(model.0, . ~ I(region != "South"))
+model.northeast <- update(model.0, . ~ I(region != "Northeast"))
+model.midwest <- update(model.0, . ~ I(region != "Midwest"))
+model.west <- update(model.0, . ~ I(region != "West"))
+model.full <- model.region
+
+cbind(AIC(model.0, model.south, model.northeast, model.midwest, model.west, model.full),
+      BIC(model.0, model.south, model.northeast, model.midwest, model.west, model.full))
+
+anova(model.0, model.south)
+anova(model.0, model.northeast)
+anova(model.0, model.midwest)
+anova(model.0, model.west)
+anova(model.0, model.full)
+
+qchisq(1 - 0.05, 1)
+qchisq(1 - 0.05, 3)
+
+```
+
 
 
 
